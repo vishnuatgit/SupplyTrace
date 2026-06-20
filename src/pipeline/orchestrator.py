@@ -6,6 +6,7 @@ from src.ingestion.parser import XMLParser
 from src.validation.rules import Validator
 from src.features.extractor import FeatureExtractor
 from src.prediction.model import RiskPredictor
+from src.dashboard.exporter import DashboardExporter
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class PipelineOrchestrator:
     def __init__(self, raw_data_dir: str, results_csv_path: str):
         self.raw_data_dir = raw_data_dir
         self.results_csv_path = results_csv_path
+        self.dashboard_csv_path = os.path.join(os.path.dirname(results_csv_path), "powerbi_summary.csv")
         self.predictor = RiskPredictor()
 
     def process_record(self, raw_record: dict) -> dict:
@@ -81,3 +83,6 @@ class PipelineOrchestrator:
         os.makedirs(os.path.dirname(self.results_csv_path), exist_ok=True)
         df.to_csv(self.results_csv_path, index=False)
         logger.info(f"Pipeline complete. Saved {len(df)} records to {self.results_csv_path}.")
+        
+        # Dashboard Export
+        DashboardExporter.export_summary(df, self.dashboard_csv_path)
