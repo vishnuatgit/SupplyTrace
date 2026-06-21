@@ -8,13 +8,32 @@ logger = logging.getLogger(__name__)
 class XMLLoader:
     """
     Responsible for loading and parsing supplier XML files safely.
+    Handles deeply nested enterprise structures by flattening them.
     """
     
     @staticmethod
+    def _flatten_tree(elem, current_path="", parsed_data=None):
+        if parsed_data is None:
+            parsed_data = {}
+            
+        path = f"{current_path}.{elem.tag}" if current_path else elem.tag
+        
+        # Remove namespace brackets {http://...} tag
+        clean_tag = path.split('}')[-1] if '}' in path else path
+        
+        if elem.text and elem.text.strip():
+            parsed_data[clean_tag] = elem.text.strip()
+            
+        for child in elem:
+            XMLLoader._flatten_tree(child, clean_tag, parsed_data)
+            
+        return parsed_data
+
+    @staticmethod
     def parse_file(file_path: str) -> dict:
         """
-        Parses an XML file and returns a flat dictionary representation.
-        Logs an error and returns None if the file is invalid or cannot be read.
+        Parses an XML file and returns a flat dictionary representation
+        using dot-notation for nested structures.
         """
         if not os.path.exists(file_path):
             logger.error(f"File not found: {file_path}")
@@ -24,12 +43,7 @@ class XMLLoader:
             tree = ET.parse(file_path)
             root = tree.getroot()
             
-            # Simple flattening for starter implementation
-            # Assumes a simple key-value structure like <invoice><id>001</id></invoice>
-            parsed_data = {}
-            for child in root:
-                parsed_data[child.tag] = child.text
-                
+            parsed_data = XMLLoader._flatten_tree(root)
             return parsed_data
             
         except ET.ParseError as e:
@@ -54,7 +68,6 @@ class XMLLoader:
                 file_path = os.path.join(directory_path, filename)
                 parsed = XMLLoader.parse_file(file_path)
                 if parsed is not None:
-                    # Inject filename as source reference
                     parsed['_source_file'] = filename
                     results.append(parsed)
                     

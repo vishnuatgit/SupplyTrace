@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from scripts.run_pipeline import run_pipeline, RESULTS_CSV_PATH
-from scripts.generate_data import run as generate_data
+from scripts.generate_data import main as generate_data
 
 def test_core_pipeline():
     # 1. Ensure we have data

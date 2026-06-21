@@ -13,8 +13,8 @@ def test_parse_valid_xml():
     try:
         result = XMLLoader.parse_file(temp_path)
         assert result is not None
-        assert result.get('id') == '001'
-        assert result.get('amount') == '500'
+        assert result.get('invoice.id') == '001'
+        assert result.get('invoice.amount') == '500'
     finally:
         os.remove(temp_path)
 
@@ -35,13 +35,16 @@ def test_parse_missing_file():
     assert result is None
 
 def test_xml_parser_standardize():
-    raw_data = {'id': '001', 'amount': '500', 'currency': 'usd', '_source_file': 'inv.xml'}
+    raw_data = {'invoice.header.id': '001', 'invoice.payableamount': '500', 'currency': 'usd', '_source_file': 'inv.xml'}
     standardized = XMLParser.standardize(raw_data)
     
+    # Check intelligent mapping
     assert standardized.get('ID') == '001'
     assert standardized.get('AMOUNT') == '500'
+    
+    # Check uppercase standardization
     assert standardized.get('CURRENCY') == 'usd'
     assert standardized.get('_source_file') == 'inv.xml'
     
     # Assert old lowercase keys do not exist (except meta)
-    assert 'id' not in standardized
+    assert 'invoice.header.id' not in standardized
