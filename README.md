@@ -1,103 +1,110 @@
-# SupplyTrace
+# SupplyTrace: Enterprise XML Validation & Risk Prediction
 
-Ever dealt with thousands of messy, nested XML files crashing a downstream business application? **SupplyTrace** is my solution to exactly that.
+![SupplyTrace Logo](https://img.shields.io/badge/Status-Active-success) ![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-teal)
 
-At its core, SupplyTrace is a Python-based data pipeline that acts as a safety net. It intercepts raw supplier XML transactions, cleans them up, flags the broken ones (like missing IDs or blank amounts), and runs them through a machine learning model to predict if they're going to fail before they ever reach the main system.
+## Overview
+Enterprise systems process millions of supplier transactions using XML documents that move across multiple processing stages before reaching the final business application. During this process, XML files may become invalid, incomplete, delayed, or fail to process correctly, resulting in silent downstream failures.
 
-It's built to be robust but straightforward, taking the headache out of unstructured, unreliable supplier data.
+**SupplyTrace** is a lightweight, full-stack XML monitoring and validation system. It automatically ingests deeply nested enterprise XML files (e.g., UBL-style invoices), validates required fields, runs a Machine Learning model to predict processing risk, and presents failure insights through an interactive web dashboard.
 
-## What It Does
-- **Ingestion & Parsing**: Safely reads messy XML files and flattens them into something actually usable.
-- **Rules Engine**: Automatically flags transactions as `VALID`, `INVALID`, or `REQUIRES_REVIEW` so bad data doesn't slip through.
-- **Feature Extraction**: Pulls out hidden metrics (like processing latency, missing fields, and file size) that hint at underlying data quality issues.
-- **Machine Learning**: Uses a SciKit-Learn Random Forest model to look at historical patterns and predict a *Risk Percentage* for each file.
-- **Data Export**: Generates clean, structured CSV datasets ready to be dropped straight into Power BI for visualizations.
+This project reduces manual verification effort and drastically improves visibility into XML processing reliability.
 
-## How It Works
+## Architecture
 
 ```mermaid
-graph LR
-    A[Raw XML Files] --> B(XML Parser)
-    B --> C(Validation Rules)
-    C --> D(Feature Extractor)
-    D --> E[ML Risk Predictor]
-    E --> F[(results.csv)]
-    F --> G[Power BI Dashboard]
+graph TD
+    A[Raw XML Files] -->|Ingested via Web UI| B(FastAPI Backend)
+    B --> C{Recursive XML Parser}
+    C -->|Flattens Data| D[Validation Engine]
+    D --> E[Feature Extractor]
+    E --> F((Random Forest ML Model))
+    F -->|JSON Response| G[Premium System Dashboard]
 ```
 
-## Project Structure
+## Key Features
+1. **Deep Recursive XML Parsing**: Automatically traverses infinitely nested enterprise XML payloads to intelligently map critical identifiers (like `ID` and `Amount`) without rigid schema definitions.
+2. **Machine Learning Risk Prediction**: Uses a trained `scikit-learn` Random Forest Classifier to assess hidden metadata (like latency, file size, and missing field ratios) to predict the likelihood of a transaction failing in the downstream application.
+3. **Enterprise Dashboard**: A glassmorphic, responsive web interface that instantly visualizes historical failure rates, average risk scores, and total processed volume.
+4. **Live Transaction Inspector**: A drag-and-drop tool within the dashboard that allows analysts to simulate a payload in real-time to see exactly how the ML model interprets the data.
 
-```
+## Directory Structure
+
+```text
 SupplyTrace/
-├── src/
-│   ├── ingestion/        # XML loading and parsing
-│   │   ├── xml_loader.py # Reads raw XML files safely
-│   │   └── parser.py     # Standardizes parsed data (keys → uppercase)
+├── frontend/             # Vanilla JS/HTML/CSS Web Application
+│   ├── index.html        # Dashboard & Inspector UI
+│   ├── styles.css        # Glassmorphism styling & animations
+│   └── app.js            # Fetch API integration
+├── src/                  # Core Python Pipeline
+│   ├── api/              # FastAPI server (server.py)
+│   ├── ingestion/        # Recursive XML loader & intelligent parser
 │   ├── validation/       # Deterministic rules engine
-│   │   └── rules.py      # VALID / INVALID / REQUIRES_REVIEW classification
-│   ├── features/         # Feature engineering for ML
-│   │   └── extractor.py  # Extracts missing_fields, xml_size, processing_time
-│   ├── prediction/       # Machine learning layer
-│   │   └── model.py      # RandomForestClassifier with fit() and predict_risk()
-│   ├── dashboard/        # Dashboard data export (upcoming)
-│   └── utils/            # Shared utilities
-├── scripts/
-│   ├── generate_data.py  # Generates synthetic XML test data
-│   └── run_pipeline.py   # End-to-end pipeline orchestrator
-├── tests/                # Full pytest test suite
-├── data/raw_xml/         # Input XML files
-├── results/              # Pipeline output (results.csv)
-├── docs/                 # Architecture documentation
-└── requirements.txt
+│   ├── features/         # Feature engineering (metadata extraction)
+│   ├── prediction/       # ML inference wrapper
+│   └── pipeline/         # Orchestrator to tie all modules together
+├── models/               # Serialized ML model weights (Random Forest)
+├── results/              # Output CSVs for historical tracking
+├── scripts/              # Helper utilities (generate_data.py)
+└── tests/                # Full pytest suite validating pipeline integrity
 ```
 
-## How to Run It Locally
-
-If you want to spin this up on your own machine, here's how:
+## Getting Started
 
 ### Prerequisites
-Make sure you have Python 3.10+ and Git installed.
+- Python 3.10+
+- A modern web browser
 
-### 1. Clone the repo
-```bash
-git clone https://github.com/vishnuatgit/SupplyTrace.git
-cd SupplyTrace
-```
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/vishnuatgit/SupplyTrace.git
+   cd SupplyTrace
+   ```
+2. Create and activate a virtual environment:
+   ```bash
+   # Windows
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+   
+   # Linux/Mac
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 2. Set up your virtual environment
-**If you're on Windows:**
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-```
-**If you're on Mac/Linux:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
+### Running the System
 
-### 3. Install the required packages
-```bash
-pip install -r requirements.txt
-```
-*(We're mainly using `pandas` for data wrangling, `scikit-learn` for the ML, and `pytest` for testing.)*
+1. **Generate Enterprise Test Data**  
+   Run the data generator to create highly nested UBL-style XML test files inside `data/raw_xml/`.
+   ```bash
+   python scripts/generate_data.py
+   ```
 
-### 4. Give it a spin
-I've included a script that generates a bunch of dummy XML data (some good, some deliberately broken) so you can see the pipeline in action.
-```bash
-# Generate the synthetic XML files
-python scripts/generate_data.py
+2. **Train the ML Model & Process Batch Data**  
+   Run the pipeline to process the generated data, extract features, and train the Random Forest model.
+   ```bash
+   python -m scripts.run_pipeline
+   ```
 
-# Run the files through the entire pipeline
-python scripts/run_pipeline.py
-```
-Check the `results/results.csv` file—you'll see exactly how the pipeline classified each file, the extracted features, and the ML-predicted risk scores.
+3. **Start the Web Dashboard**  
+   Boot up the FastAPI server, which hosts both the REST endpoints and the static frontend.
+   ```bash
+   python -m src.api.server
+   ```
 
-### 5. Run the tests
-There's a full test suite covering ingestion, validation, feature extraction, and ML prediction.
+4. **Access the Application**  
+   Open your browser and navigate to:  
+   **[http://127.0.0.1:8000](http://127.0.0.1:8000)**  
+   *You can drag and drop the generated files from `data/raw_xml/` directly into the UI to test the live inspector.*
+
+## Testing
+SupplyTrace is fully tested using `pytest`. The test suite covers ingestion, validation, feature extraction, and prediction to ensure robust CI/CD integration.
 ```bash
 python -m pytest tests/
 ```
 
 ## License
-Built for educational and portfolio purposes. Feel free to explore the code!
+Developed as an enterprise architecture solution and portfolio demonstration. All rights reserved.
