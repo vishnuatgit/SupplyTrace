@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupplyTrace | ML Risk Predictor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>SupplyTrace</h1>
+            <p>Enterprise XML Validation & Risk Prediction</p>
+        </header>
+
+        <main>
+            <!-- Enterprise Dashboard Overview -->
+            <section class="dashboard-overview" id="dashboard-stats">
+                <div class="stat-card glass-panel">
+                    <h3>Total Processed</h3>
+                    <p class="stat-value" id="stat-total">0</p>
+                </div>
+                <div class="stat-card glass-panel">
+                    <h3>System Failure Rate</h3>
+                    <p class="stat-value error-text" id="stat-failure">0%</p>
+                </div>
+                <div class="stat-card glass-panel">
+                    <h3>Avg. Risk Score</h3>
+                    <p class="stat-value warning-text" id="stat-risk">0%</p>
+                </div>
+                <div class="stat-card glass-panel">
+                    <h3>High Risk Flags</h3>
+                    <p class="stat-value danger-text" id="stat-flags">0</p>
+                </div>
+            </section>
+
+            <div class="upload-section glass-panel" id="drop-zone">
+                <div class="upload-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <h2>Upload XML Transaction</h2>
+                <p>Drag and drop your supplier file here, or click to browse</p>
+                <input type="file" id="file-input" accept=".xml" hidden>
+                <button id="browse-btn" class="btn-primary">Select File</button>
+            </div>
+
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>Analyzing Payload & Computing Risk...</p>
+            </div>
+
+            <div id="results" class="results-section hidden">
+                <div class="glass-panel result-card">
+                    <div class="card-header">
+                        <h3 id="res-filename">filename.xml</h3>
+                        <span id="res-status" class="status-badge">VALID</span>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <span class="metric-label">Risk Score</span>
+                            <div class="risk-display">
+                                <span id="res-risk-score" class="metric-value risk-value">0%</span>
+                                <span id="res-risk-flag" class="flag-badge">LOW</span>
+                            </div>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Missing Fields</span>
+                            <span id="res-missing" class="metric-value">0</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">File Size</span>
+                            <span id="res-size" class="metric-value">0 B</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Proc. Latency</span>
+                            <span id="res-time" class="metric-value">0 ms</span>
+                        </div>
+                    </div>
+                    
+                    <div id="res-errors-container" class="errors-container hidden">
+                        <span class="metric-label">Validation Errors</span>
+                        <p id="res-errors" class="error-text"></p>
+                    </div>
+                    
+                    <button id="reset-btn" class="btn-secondary">Analyze Another File</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
