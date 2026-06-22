@@ -18,35 +18,48 @@ graph TD
     C -->|Flattens Data| D[Validation Engine]
     D --> E[Feature Extractor]
     E --> F((Random Forest ML Model))
-    F -->|JSON Response| G[Premium System Dashboard]
+    F -->|JSON Response| G[System Dashboard]
+    G --> H[Live Transaction Log]
+    B -->|Audit Trail| I[JSON Audit Log]
 ```
 
 ## Key Features
-1. **Deep Recursive XML Parsing**: Automatically traverses infinitely nested enterprise XML payloads to intelligently map critical identifiers (like `ID` and `Amount`) without rigid schema definitions.
+1. **Deep Recursive XML Parsing**: Automatically traverses infinitely nested enterprise XML payloads using dot-notation flattening, and intelligently maps critical identifiers (like `ID` and `Amount`) without rigid schema definitions.
 2. **Machine Learning Risk Prediction**: Uses a trained `scikit-learn` Random Forest Classifier to assess hidden metadata (like latency, file size, and missing field ratios) to predict the likelihood of a transaction failing in the downstream application.
-3. **Enterprise Dashboard**: A glassmorphic, responsive web interface that instantly visualizes historical failure rates, average risk scores, and total processed volume.
+3. **Enterprise Dashboard**: A glassmorphic, responsive web interface that instantly visualizes historical failure rates, average risk scores, and total processed volume. Interactive hover tooltips explain each metric in detail.
 4. **Live Transaction Inspector**: A drag-and-drop tool within the dashboard that allows analysts to simulate a payload in real-time to see exactly how the ML model interprets the data.
+5. **Transaction History Feed**: A scrollable log of the most recent XML transactions, displaying file names, validation statuses, risk scores, and error summaries. Updates in real-time as new files are analyzed.
+6. **Compliance Audit Logging**: Every transaction processed (both via the batch pipeline and the web UI) is recorded as a structured JSON Lines (`.jsonl`) audit trail for enterprise compliance and traceability.
 
 ## Directory Structure
 
 ```text
 SupplyTrace/
 ├── frontend/             # Vanilla JS/HTML/CSS Web Application
-│   ├── index.html        # Dashboard & Inspector UI
-│   ├── styles.css        # Glassmorphism styling & animations
-│   └── app.js            # Fetch API integration
+│   ├── index.html        # Dashboard, Inspector, & Transaction Log UI
+│   ├── styles.css        # Glassmorphism styling, tooltips, & animations
+│   └── app.js            # Fetch API integration & dynamic table rendering
 ├── src/                  # Core Python Pipeline
 │   ├── api/              # FastAPI server (server.py)
 │   ├── ingestion/        # Recursive XML loader & intelligent parser
 │   ├── validation/       # Deterministic rules engine
 │   ├── features/         # Feature engineering (metadata extraction)
 │   ├── prediction/       # ML inference wrapper
-│   └── pipeline/         # Orchestrator to tie all modules together
+│   ├── pipeline/         # Orchestrator with audit logging
+│   └── dashboard/        # BI Dashboard CSV Exporter
 ├── models/               # Serialized ML model weights (Random Forest)
-├── results/              # Output CSVs for historical tracking
-├── scripts/              # Helper utilities (generate_data.py)
+├── results/              # Output CSVs, audit logs, & historical tracking
+├── scripts/              # Helper utilities (generate_data.py, run_pipeline.py)
 └── tests/                # Full pytest suite validating pipeline integrity
 ```
+
+## REST API Endpoints
+
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `POST` | `/api/analyze` | Upload an XML file for validation and ML risk prediction |
+| `GET` | `/api/stats` | Retrieve aggregated dashboard metrics (failure rate, avg risk, etc.) |
+| `GET` | `/api/history` | Fetch the 15 most recent processed transactions for the log feed |
 
 ## Getting Started
 

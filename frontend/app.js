@@ -22,9 +22,71 @@ document.addEventListener('DOMContentLoaded', () => {
     const statFailure = document.getElementById('stat-failure');
     const statRisk = document.getElementById('stat-risk');
     const statFlags = document.getElementById('stat-flags');
+    const historyTableBody = document.getElementById('history-table-body');
 
-    // Fetch Dashboard Stats on Load
+    // Fetch Dashboard Stats and History on Load
     fetchDashboardStats();
+    fetchHistory();
+
+    async function fetchHistory() {
+        try {
+            const res = await fetch('/api/history');
+            if (res.ok) {
+                const data = await res.json();
+                historyTableBody.innerHTML = '';
+                data.forEach(item => {
+                    appendHistoryRow(item);
+                });
+            }
+        } catch (e) {
+            console.error("Failed to fetch transaction history", e);
+        }
+    }
+
+    function appendHistoryRow(item) {
+        const tr = document.createElement('tr');
+        tr.className = 'fade-in';
+        
+        // Handle potential N/A for risk score
+        const riskScoreStr = item.risk_score === 'N/A' || item.risk_score === '' ? 'N/A' : `${item.risk_score}%`;
+        const riskFlagStr = item.risk_flag || 'N/A';
+        
+        tr.innerHTML = `
+            <td>${item.source_file}</td>
+            <td><span class="badge status-${item.status}">${item.status}</span></td>
+            <td>${riskScoreStr}</td>
+            <td><span class="badge flag-${riskFlagStr}">${riskFlagStr}</span></td>
+            <td class="error-text">${item.errors || '-'}</td>
+        `;
+        historyTableBody.appendChild(tr);
+    }
+
+    function prependHistoryRow(item) {
+        const tr = document.createElement('tr');
+        tr.className = 'fade-in';
+        
+        const riskScoreStr = item.risk_score === 'N/A' || item.risk_score === '' ? 'N/A' : `${item.risk_score}%`;
+        const riskFlagStr = item.risk_flag || 'N/A';
+        
+        tr.innerHTML = `
+            <td>${item.source_file}</td>
+            <td><span class="badge status-${item.status}">${item.status}</span></td>
+            <td>${riskScoreStr}</td>
+            <td><span class="badge flag-${riskFlagStr}">${riskFlagStr}</span></td>
+            <td class="error-text">${item.errors || '-'}</td>
+        `;
+        
+        if (historyTableBody.firstChild) {
+            historyTableBody.insertBefore(tr, historyTableBody.firstChild);
+        } else {
+            historyTableBody.appendChild(tr);
+        }
+        
+        // Limit to 15 rows
+        while (historyTableBody.children.length > 15) {
+            historyTableBody.removeChild(historyTableBody.lastChild);
+        }
+    }
 
     async function fetchDashboardStats() {
         try {
@@ -155,6 +217,18 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             elErrorsContainer.classList.add('hidden');
         }
+
+        // Add to history log table
+        prependHistoryRow({
+            source_file: data.filename,
+            status: data.status,
+            risk_score: data.prediction.risk_score,
+            risk_flag: data.prediction.risk_flag,
+            errors: data.errors.join('; ')
+        });
+
+        // Refresh stats cards
+        fetchDashboardStats();
     }
 
     function resetUI() {

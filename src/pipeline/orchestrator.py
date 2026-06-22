@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 import logging
+import json
+from datetime import datetime
 from src.ingestion.xml_loader import XMLLoader
 from src.ingestion.parser import XMLParser
 from src.validation.rules import Validator
@@ -86,3 +88,26 @@ class PipelineOrchestrator:
         
         # Dashboard Export
         DashboardExporter.export_summary(df, self.dashboard_csv_path)
+        
+        # Write Audit Log
+        self.write_audit_log(df)
+
+    def write_audit_log(self, df: pd.DataFrame):
+        """Writes a production-ready JSON audit trail for compliance tracking."""
+        audit_path = os.path.join(os.path.dirname(self.results_csv_path), "audit_log.jsonl")
+        try:
+            with open(audit_path, "a", encoding="utf-8") as f:
+                for _, row in df.iterrows():
+                    log_entry = {
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "source_file": row["source_file"],
+                        "transaction_id": row["id"],
+                        "validation_status": row["status"],
+                        "errors": row["errors"] if pd.notna(row["errors"]) else "",
+                        "risk_score": row["risk_score"],
+                        "risk_flag": row["risk_flag"]
+                    }
+                    f.write(json.dumps(log_entry) + "\n")
+            logger.info(f"Audit trail written to {audit_path}")
+        except Exception as e:
+            logger.error(f"Failed to write audit log: {e}")

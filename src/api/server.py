@@ -2,6 +2,8 @@ import os
 import tempfile
 import pandas as pd
 import logging
+import json
+from datetime import datetime
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -95,7 +97,7 @@ async def analyze_xml(file: UploadFile = File(...)):
             except Exception as e:
                 logger.error(f"Prediction failed: {e}")
                 
-        return {
+        response_data = {
             "filename": file.filename,
             "status": status.value,
             "errors": errors,
@@ -106,9 +108,37 @@ async def analyze_xml(file: UploadFile = File(...)):
             }
         }
         
+        # Write to Audit Log
+        write_single_audit_log(response_data)
+        
+        return response_data
+        
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+def write_single_audit_log(result: dict):
+    """Helper to append a single analysis transaction to the audit log."""
+    audit_dir = "results"
+    os.makedirs(audit_dir, exist_ok=True)
+    audit_path = os.path.join(audit_dir, "audit_log.jsonl")
+    try:
+        with open(audit_path, "a", encoding="utf-8") as f:
+            log_entry = {
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "source_file": result["filename"],
+                "transaction_id": result["features"].get("transaction_id", "N/A"), # Or check fallback
+                "validation_status": result["status"],
+                "errors": "; ".join(result["errors"]) if result["errors"] else "",
+                "risk_score": result["prediction"]["risk_score"],
+                "risk_flag": result["prediction"]["risk_flag"]
+            }
+            # Fallback if ID wasn't structured inside features dictionary
+            if log_entry["transaction_id"] == "N/A" and "ID" in result:
+                log_entry["transaction_id"] = result["ID"]
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception as e:
+        logger.error(f"Failed to write single audit log: {e}")
 
 @app.get("/api/stats")
 async def get_dashboard_stats():
@@ -136,6 +166,23 @@ async def get_dashboard_stats():
     except Exception as e:
         logger.error(f"Failed to read stats: {e}")
         raise HTTPException(status_code=500, detail="Failed to load dashboard statistics")
+
+@app.get("/api/history")
+async def get_history():
+    """Returns the last 15 processed transactions for the dashboard log."""
+    csv_path = os.path.join("results", "results.csv")
+    if not os.path.exists(csv_path):
+        return []
+    try:
+        df = pd.read_csv(csv_path)
+        # Take last 15 records, fill NaN with empty string
+        df = df.tail(15).fillna("")
+        records = df.to_dict(orient="records")
+        # Return in reverse chronological order (newest first)
+        return records[::-1]
+    except Exception as e:
+        logger.error(f"Failed to read history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load transaction history")
 
 # Serve the static frontend
 frontend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")

@@ -22,19 +22,19 @@
         <main>
             <!-- Enterprise Dashboard Overview -->
             <section class="dashboard-overview" id="dashboard-stats">
-                <div class="stat-card glass-panel">
+                <div class="stat-card glass-panel" data-tooltip="Total volume of processed XML transaction payloads.">
                     <h3>Total Processed</h3>
                     <p class="stat-value" id="stat-total">0</p>
                 </div>
-                <div class="stat-card glass-panel">
+                <div class="stat-card glass-panel" data-tooltip="Percentage of payloads flagged as INVALID by system validation rules.">
                     <h3>System Failure Rate</h3>
                     <p class="stat-value error-text" id="stat-failure">0%</p>
                 </div>
-                <div class="stat-card glass-panel">
+                <div class="stat-card glass-panel" data-tooltip="Average computed risk probability by the Machine Learning model.">
                     <h3>Avg. Risk Score</h3>
                     <p class="stat-value warning-text" id="stat-risk">0%</p>
                 </div>
-                <div class="stat-card glass-panel">
+                <div class="stat-card glass-panel" data-tooltip="Total count of transactions flagged as HIGH RISK by the RandomForest model.">
                     <h3>High Risk Flags</h3>
                     <p class="stat-value danger-text" id="stat-flags">0</p>
                 </div>
@@ -96,6 +96,27 @@
                     <button id="reset-btn" class="btn-secondary">Analyze Another File</button>
                 </div>
             </div>
+
+            <!-- Live Transaction Log -->
+            <section class="glass-panel history-section">
+                <h2>Recent XML Transactions</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>Status</th>
+                                <th>Risk Score</th>
+                                <th>Risk Flag</th>
+                                <th>Errors</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body">
+                            <!-- Filled dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     </div>
 
