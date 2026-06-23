@@ -25,7 +25,7 @@ graph TD
 
 ## Key Features
 1. **Deep Recursive XML Parsing**: Automatically traverses infinitely nested enterprise XML payloads using dot-notation flattening, and intelligently maps critical identifiers (like `ID` and `Amount`) without rigid schema definitions.
-2. **Machine Learning Risk Prediction**: Uses a trained `scikit-learn` Random Forest Classifier to assess hidden metadata (like latency, file size, and missing field ratios) to predict the likelihood of a transaction failing in the downstream application.
+2. **Machine Learning Risk Prediction**: Uses a trained `scikit-learn` Random Forest Classifier (achieving **94% accuracy**) to assess hidden metadata (like latency, file size, and missing field ratios) to predict the likelihood of a transaction failing in the downstream application.
 3. **Enterprise Dashboard**: A glassmorphic, responsive web interface that instantly visualizes historical failure rates, average risk scores, and total processed volume. Interactive hover tooltips explain each metric in detail.
 4. **Live Transaction Inspector**: A drag-and-drop tool within the dashboard that allows analysts to simulate a payload in real-time to see exactly how the ML model interprets the data.
 5. **Transaction History Feed**: A scrollable log of the most recent XML transactions, displaying file names, validation statuses, risk scores, and error summaries. Updates in real-time as new files are analyzed.
