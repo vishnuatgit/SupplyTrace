@@ -102,6 +102,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load XML Template handler
     loadTemplateBtn.addEventListener('click', () => {
         xmlEditor.value = xmlTemplate;
+        // Visual feedback
+        const origText = loadTemplateBtn.textContent;
+        loadTemplateBtn.textContent = '✓ Loaded!';
+        loadTemplateBtn.style.color = 'var(--success)';
+        setTimeout(() => {
+            loadTemplateBtn.textContent = origText;
+            loadTemplateBtn.style.color = '';
+        }, 1200);
     });
 
     // Fetch History & Stats from API
