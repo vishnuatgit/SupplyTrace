@@ -809,7 +809,6 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 0.65rem;
     transition: all 0.2s ease;
-    overflow: hidden;
 }
 
 .accordion-item:hover {
