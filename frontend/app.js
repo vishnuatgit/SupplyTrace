@@ -84,20 +84,20 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchHistory();
     xmlEditor.value = xmlTemplate;
 
-    // Tab Switching Functions
-    window.switchInspectorTab = function(tabName) {
-        if (tabName === 'upload') {
-            tabUploadBtn.classList.add('active');
-            tabSandboxBtn.classList.remove('active');
-            paneUpload.classList.add('active');
-            paneSandbox.classList.remove('active');
-        } else {
-            tabUploadBtn.classList.remove('active');
-            tabSandboxBtn.classList.add('active');
-            paneUpload.classList.remove('active');
-            paneSandbox.classList.add('active');
-        }
-    };
+    // Tab Switching Event Listeners
+    tabUploadBtn.addEventListener('click', () => {
+        tabUploadBtn.classList.add('active');
+        tabSandboxBtn.classList.remove('active');
+        paneUpload.classList.add('active');
+        paneSandbox.classList.remove('active');
+    });
+
+    tabSandboxBtn.addEventListener('click', () => {
+        tabSandboxBtn.classList.add('active');
+        tabUploadBtn.classList.remove('active');
+        paneSandbox.classList.add('active');
+        paneUpload.classList.remove('active');
+    });
 
     // Load XML Template handler
     loadTemplateBtn.addEventListener('click', () => {
