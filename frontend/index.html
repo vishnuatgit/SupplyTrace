@@ -3,120 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SupplyTrace | ML Risk Predictor</title>
+    <title>SupplyTrace | Enterprise XML Analytics & Risk Prediction</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="background-orbs">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
+    <div class="background-glows">
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
     </div>
 
-    <div class="container">
-        <header>
-            <h1>SupplyTrace</h1>
-            <p>Enterprise XML Validation & Risk Prediction</p>
+    <div class="dashboard-wrapper">
+        <header class="dashboard-header">
+            <div class="header-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="logo-icon">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+                <div class="logo-text">
+                    <h1>SupplyTrace</h1>
+                    <span class="system-status">
+                        <span class="status-dot"></span>
+                        Enterprise Core Engine Active
+                    </span>
+                </div>
+            </div>
+            <div class="header-tagline">
+                <p>Real-Time Ingestion, Validation & ML Processing Risk Diagnostics</p>
+            </div>
         </header>
 
-        <main>
-            <!-- Enterprise Dashboard Overview -->
-            <section class="dashboard-overview" id="dashboard-stats">
-                <div class="stat-card glass-panel" data-tooltip="Total volume of processed XML transaction payloads.">
+        <!-- KPI Metrics Ribbon -->
+        <section class="metrics-ribbon" id="dashboard-stats">
+            <div class="metric-card glass-panel" data-tooltip="Total volume of processed XML transaction payloads.">
+                <div class="metric-info">
                     <h3>Total Processed</h3>
-                    <p class="stat-value" id="stat-total">0</p>
+                    <p class="metric-value" id="stat-total">0</p>
                 </div>
-                <div class="stat-card glass-panel" data-tooltip="Percentage of payloads flagged as INVALID by system validation rules.">
+                <div class="metric-icon-bg total-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                </div>
+            </div>
+            <div class="metric-card glass-panel" data-tooltip="Percentage of payloads flagged as INVALID by validation rules.">
+                <div class="metric-info">
                     <h3>System Failure Rate</h3>
-                    <p class="stat-value error-text" id="stat-failure">0%</p>
+                    <p class="metric-value error-text" id="stat-failure">0%</p>
                 </div>
-                <div class="stat-card glass-panel" data-tooltip="Average computed risk probability by the Machine Learning model.">
+                <div class="metric-icon-bg failure-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </div>
+            </div>
+            <div class="metric-card glass-panel" data-tooltip="Average computed risk probability by the Machine Learning model.">
+                <div class="metric-info">
                     <h3>Avg. Risk Score</h3>
-                    <p class="stat-value warning-text" id="stat-risk">0%</p>
+                    <p class="metric-value warning-text" id="stat-risk">0%</p>
                 </div>
-                <div class="stat-card glass-panel" data-tooltip="Total count of transactions flagged as HIGH RISK by the RandomForest model.">
+                <div class="metric-icon-bg risk-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+            </div>
+            <div class="metric-card glass-panel" data-tooltip="Total count of transactions flagged as HIGH RISK by the RandomForest model.">
+                <div class="metric-info">
                     <h3>High Risk Flags</h3>
-                    <p class="stat-value danger-text" id="stat-flags">0</p>
+                    <p class="metric-value danger-text" id="stat-flags">0</p>
                 </div>
-            </section>
-
-            <div class="upload-section glass-panel" id="drop-zone">
-                <div class="upload-icon">
-                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
+                <div class="metric-icon-bg flags-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="11"></line></svg>
                 </div>
-                <h2>Upload XML Transaction</h2>
-                <p>Drag and drop your supplier file here, or click to browse</p>
-                <input type="file" id="file-input" accept=".xml" hidden>
-                <button id="browse-btn" class="btn-primary">Select File</button>
             </div>
+        </section>
 
-            <div id="loading" class="hidden">
-                <div class="spinner"></div>
-                <p>Analyzing Payload & Computing Risk...</p>
-            </div>
-
-            <div id="results" class="results-section hidden">
-                <div class="glass-panel result-card">
-                    <div class="card-header">
-                        <h3 id="res-filename">filename.xml</h3>
-                        <span id="res-status" class="status-badge">VALID</span>
+        <!-- Main Dashboard Workspace Layout -->
+        <main class="dashboard-grid">
+            
+            <!-- Left Column: Ingestion & Live Editor/Sandbox -->
+            <div class="grid-column left-column">
+                <section class="glass-panel inspector-panel">
+                    <div class="panel-header">
+                        <h2>Payload Inspector</h2>
+                        <div class="tab-selectors">
+                            <button id="tab-upload-btn" class="tab-btn active">
+                                Upload File
+                            </button>
+                            <button id="tab-sandbox-btn" class="tab-btn">
+                                Sandbox Editor
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div class="metrics-grid">
-                        <div class="metric">
-                            <span class="metric-label">Risk Score</span>
-                            <div class="risk-display">
-                                <span id="res-risk-score" class="metric-value risk-value">0%</span>
-                                <span id="res-risk-flag" class="flag-badge">LOW</span>
+
+                    <!-- Upload File Tab Pane -->
+                    <div id="pane-upload" class="tab-pane active">
+                        <div class="upload-zone" id="drop-zone">
+                            <div class="upload-icon">
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                            </div>
+                            <h3>Drag & Drop XML Transaction</h3>
+                            <p>Upload a supplier invoice to analyze validation & risk</p>
+                            <input type="file" id="file-input" accept=".xml" hidden>
+                            <button id="browse-btn" class="btn-primary-outline">Select File</button>
+                        </div>
+                    </div>
+
+                    <!-- Sandbox Editor Tab Pane -->
+                    <div id="pane-sandbox" class="tab-pane">
+                        <div class="sandbox-container">
+                            <div class="sandbox-header">
+                                <span class="editor-filename">sandbox_invoice.xml</span>
+                                <button id="load-template-btn" class="btn-text-only">Load Valid Template</button>
+                            </div>
+                            <textarea id="xml-editor" placeholder="Paste or edit raw UBL XML content here..." spellcheck="false"></textarea>
+                            <div class="sandbox-actions">
+                                <button id="analyze-sandbox-btn" class="btn-primary">Analyze Payload</button>
                             </div>
                         </div>
-                        <div class="metric">
-                            <span class="metric-label">Missing Fields</span>
-                            <span id="res-missing" class="metric-value">0</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">File Size</span>
-                            <span id="res-size" class="metric-value">0 B</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Proc. Latency</span>
-                            <span id="res-time" class="metric-value">0 ms</span>
+                    </div>
+
+                    <!-- Loading / Evaluating State -->
+                    <div id="loading" class="hidden">
+                        <div class="spinner-container">
+                            <div class="spinner"></div>
+                            <p>Evaluating rules & computing ML risk vectors...</p>
                         </div>
                     </div>
-                    
-                    <div id="res-errors-container" class="errors-container hidden">
-                        <span class="metric-label">Validation Errors</span>
-                        <p id="res-errors" class="error-text"></p>
+
+                    <!-- Analysis Output Panel -->
+                    <div id="results" class="results-container hidden">
+                        <div class="result-card-header">
+                            <h3 id="res-filename">filename.xml</h3>
+                            <span id="res-status" class="status-badge">VALID</span>
+                        </div>
+                        
+                        <div class="metrics-subgrid">
+                            <div class="sub-metric">
+                                <span class="sub-label">Risk Probability</span>
+                                <div class="risk-meter-wrapper">
+                                    <span id="res-risk-score" class="sub-value risk-val">0%</span>
+                                    <span id="res-risk-flag" class="flag-badge">LOW</span>
+                                </div>
+                            </div>
+                            <div class="sub-metric">
+                                <span class="sub-label">Missing Fields</span>
+                                <span id="res-missing" class="sub-value text-highlight">0</span>
+                            </div>
+                            <div class="sub-metric">
+                                <span class="sub-label">File Size</span>
+                                <span id="res-size" class="sub-value">0 B</span>
+                            </div>
+                            <div class="sub-metric">
+                                <span class="sub-label">Latency</span>
+                                <span id="res-time" class="sub-value">0 ms</span>
+                            </div>
+                        </div>
+                        
+                        <div id="res-errors-container" class="errors-box hidden">
+                            <span class="sub-label error-header">Validation Failures</span>
+                            <p id="res-errors" class="error-msg"></p>
+                        </div>
+                        
+                        <div class="result-actions">
+                            <button id="reset-btn" class="btn-secondary">Clear Inspector</button>
+                        </div>
                     </div>
-                    
-                    <button id="reset-btn" class="btn-secondary">Analyze Another File</button>
-                </div>
+                </section>
             </div>
 
-            <!-- Live Transaction Log -->
-            <section class="glass-panel history-section">
-                <h2>Recent XML Transactions</h2>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>File Name</th>
-                                <th>Status</th>
-                                <th>Risk Score</th>
-                                <th>Risk Flag</th>
-                                <th>Errors</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-table-body">
-                            <!-- Filled dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+            <!-- Right Column: Visual Charts & Transaction Log -->
+            <div class="grid-column right-column">
+                
+                <!-- SVG Graphs/Analytics Card -->
+                <section class="glass-panel analytics-panel">
+                    <h2>Analytics & Health Metrics</h2>
+                    <div class="charts-row">
+                        <!-- Chart 1: Circular Health Dial -->
+                        <div class="chart-wrapper">
+                            <span class="chart-title">System Compliance Health</span>
+                            <div class="radial-gauge">
+                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                    <circle class="gauge-bg" cx="60" cy="60" r="50"></circle>
+                                    <circle id="gauge-fill" class="gauge-fill" cx="60" cy="60" r="50" transform="rotate(-90 60 60)"></circle>
+                                </svg>
+                                <div class="gauge-value" id="gauge-val">0%</div>
+                            </div>
+                            <span class="chart-caption">Valid transactions vs total</span>
+                        </div>
+
+                        <!-- Chart 2: Risk Profile Spread -->
+                        <div class="chart-wrapper">
+                            <span class="chart-title">Risk Flags Distribution</span>
+                            <div class="distribution-bars">
+                                <div class="dist-bar-item">
+                                    <span class="dist-label">Low Risk</span>
+                                    <div class="bar-outer">
+                                        <div id="dist-bar-low" class="bar-inner low-bg" style="width: 0%"></div>
+                                    </div>
+                                    <span class="dist-count" id="dist-val-low">0</span>
+                                </div>
+                                <div class="dist-bar-item">
+                                    <span class="dist-label">High Risk</span>
+                                    <div class="bar-outer">
+                                        <div id="dist-bar-high" class="bar-inner high-bg" style="width: 0%"></div>
+                                    </div>
+                                    <span class="dist-count" id="dist-val-high">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Scrollbar-free Interactive Activity Feed -->
+                <section class="glass-panel history-panel">
+                    <div class="panel-header">
+                        <h2>Live Transaction Log</h2>
+                        <span class="feed-indicator">
+                            <span class="pulse-dot"></span>
+                            Real-time updates
+                        </span>
+                    </div>
+                    <div class="accordion-feed" id="history-feed">
+                        <!-- Filled dynamically with interactive cards -->
+                        <div class="feed-empty-state">No transaction logs loaded.</div>
+                    </div>
+                </section>
+            </div>
+            
         </main>
     </div>
 
