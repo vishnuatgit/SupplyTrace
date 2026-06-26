@@ -25,20 +25,23 @@ graph TD
 
 ## Key Features
 1. **Deep Recursive XML Parsing**: Automatically traverses infinitely nested enterprise XML payloads using dot-notation flattening, and intelligently maps critical identifiers (like `ID` and `Amount`) without rigid schema definitions.
-2. **Machine Learning Risk Prediction**: Uses a trained `scikit-learn` Random Forest Classifier (achieving **94% accuracy**) to assess hidden metadata (like latency, file size, and missing field ratios) to predict the likelihood of a transaction failing in the downstream application.
-3. **Enterprise Dashboard**: A glassmorphic, responsive web interface that instantly visualizes historical failure rates, average risk scores, and total processed volume. Interactive hover tooltips explain each metric in detail.
-4. **Live Transaction Inspector**: A drag-and-drop tool within the dashboard that allows analysts to simulate a payload in real-time to see exactly how the ML model interprets the data.
-5. **Transaction History Feed**: A scrollable log of the most recent XML transactions, displaying file names, validation statuses, risk scores, and error summaries. Updates in real-time as new files are analyzed.
-6. **Compliance Audit Logging**: Every transaction processed (both via the batch pipeline and the web UI) is recorded as a structured JSON Lines (`.jsonl`) audit trail for enterprise compliance and traceability.
+2. **Machine Learning Risk Prediction**: Uses a trained `scikit-learn` Random Forest Classifier to assess hidden metadata (like latency, file size, and missing field ratios) to predict the likelihood of a transaction failing in the downstream application.
+3. **SaaS Dashboard Layout**: A professional, responsive double-column dark mode interface (Stripe/Vercel inspired) with a top KPI metrics ribbon and hover-tooltips.
+4. **Interactive XML Sandbox & Simulator**: An inline code editor allowing developers and analysts to modify raw XML content directly in the browser, load valid UBL templates, and click "Analyze" to run validation and ML risk scoring instantly.
+5. **Dynamic SVG Visualizations**:
+   - **System Compliance Health Gauge**: A clean, minimal circular radial gauge showing the percentage of validated payloads.
+   - **Risk Profile Spread**: An animated horizontal bar graph displaying the distribution of low-risk vs. high-risk transactions.
+6. **Accordion-Style Activity Feed**: An interactive transaction feed replacing tables with expandable cards. Long filenames are truncated with ellipsis and show a hover title tooltip, completely resolving horizontal scrollbar overflow.
+7. **Compliance Audit Logging**: Every transaction processed (both via the batch pipeline and the web UI) is recorded as a structured JSON Lines (`.jsonl`) audit trail for enterprise compliance and traceability.
 
 ## Directory Structure
 
 ```text
 SupplyTrace/
 ├── frontend/             # Vanilla JS/HTML/CSS Web Application
-│   ├── index.html        # Dashboard, Inspector, & Transaction Log UI
-│   ├── styles.css        # Glassmorphism styling, tooltips, & animations
-│   └── app.js            # Fetch API integration & dynamic table rendering
+│   ├── index.html        # Modern two-column dashboard with Sandbox Editor
+│   ├── styles.css        # Professional SaaS styles, SVG charts & accordion transition rules
+│   └── app.js            # Tab switching, SVG render, Sandbox eval & card accordion logic
 ├── src/                  # Core Python Pipeline
 │   ├── api/              # FastAPI server (server.py)
 │   ├── ingestion/        # Recursive XML loader & intelligent parser
