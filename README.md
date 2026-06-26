@@ -123,6 +123,11 @@ SupplyTrace/
    - Drag and drop XML files from `data/raw_xml/` into the **Upload File** tab to test live validation.
    - Switch to the **Sandbox Editor** tab to paste, edit, or load a UBL XML template and click **Analyze Payload** for instant ML risk scoring.
 
+## Recent Updates & Bug Fixes
+- **UI State Fix:** Restored the `.hidden` utility class to ensure loading spinners and results panels don't overlap.
+- **Accordion Layout:** Prevented status badges and risk scores from being clipped on collapsed cards by enforcing `flex-shrink: 0`.
+- **Sandbox UX:** Added visual confirmation flashes to the Sandbox Editor template loader and implemented cache-busting to ensure latest frontend logic is served.
+
 ## Testing
 SupplyTrace is fully tested using `pytest`. The test suite covers ingestion, validation, feature extraction, and prediction to ensure robust CI/CD integration.
 ```bash
