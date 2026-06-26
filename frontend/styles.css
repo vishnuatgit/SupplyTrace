@@ -860,6 +860,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-shrink: 0;
 }
 
 .badge {
@@ -880,6 +881,7 @@ body {
     transition: transform 0.2s ease;
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .accordion-item.active .chevron-icon {
