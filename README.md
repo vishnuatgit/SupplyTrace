@@ -105,16 +105,23 @@ SupplyTrace/
    python -m scripts.run_pipeline
    ```
 
-3. **Start the Web Dashboard**  
+3. **Run the Automated Test Suite**  
+   Verify pipeline integrity across ingestion, validation, feature extraction, and prediction.
+   ```bash
+   python -m pytest tests/ -v
+   ```
+
+4. **Start the Web Dashboard**  
    Boot up the FastAPI server, which hosts both the REST endpoints and the static frontend.
    ```bash
    python -m src.api.server
    ```
 
-4. **Access the Application**  
+5. **Access the Application**  
    Open your browser and navigate to:  
    **[http://127.0.0.1:8000](http://127.0.0.1:8000)**  
-   *You can drag and drop the generated files from `data/raw_xml/` directly into the UI to test the live inspector.*
+   - Drag and drop XML files from `data/raw_xml/` into the **Upload File** tab to test live validation.
+   - Switch to the **Sandbox Editor** tab to paste, edit, or load a UBL XML template and click **Analyze Payload** for instant ML risk scoring.
 
 ## Testing
 SupplyTrace is fully tested using `pytest`. The test suite covers ingestion, validation, feature extraction, and prediction to ensure robust CI/CD integration.
