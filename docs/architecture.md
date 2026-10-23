@@ -11,4 +11,4 @@ SupplyTrace is a lightweight XML monitoring and validation system. It reads supp
 5. **Dashboard**: A visualization layer to monitor XML processing health.
 
 ## Data Flow
-Supplier XML -> `xml_loader.py` -> `validator.py` -> `feature_extractor.py` -> `predictor.py` -> Dashboard
+Supplier XML -> `ingestion/xml_loader.py` -> `ingestion/parser.py` -> `validation/rules.py` -> `features/extractor.py` -> `prediction/model.py` -> `dashboard/exporter.py` + `api/server.py` (dashboard)

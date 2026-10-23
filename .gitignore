@@ -1,11 +1,31 @@
+# Virtual environments
 venv/
+.venv/
+env/
+
+# Python
 __pycache__/
 *.pyc
+
+# Secrets
 .env
-.DS_Store
+
+# Generated data and output
 data/raw_xml/
 data/processed/
 data/synthetic/
 results/
 logs/
+models/
+
+# Test and coverage
 .pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store

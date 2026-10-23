@@ -1,20 +1,20 @@
+import json
+import logging
 import os
 import tempfile
-import pandas as pd
-import logging
-import json
-from datetime import datetime
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+from datetime import UTC, datetime
 
-from src.ingestion.xml_loader import XMLLoader
-from src.ingestion.parser import XMLParser
-from src.validation.rules import Validator
+import pandas as pd
+import uvicorn
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from src.features.extractor import FeatureExtractor
+from src.ingestion.parser import XMLParser
+from src.ingestion.xml_loader import XMLLoader
 from src.prediction.model import RiskPredictor
+from src.validation.rules import Validator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ app.add_middleware(
 
 predictor = RiskPredictor()
 
+
 @app.on_event("startup")
 def startup_event():
     """Train the model on startup if historical data exists."""
@@ -39,8 +40,8 @@ def startup_event():
     if os.path.exists(csv_path):
         try:
             df = pd.read_csv(csv_path)
-            has_valid = (df['status'] == 'VALID').any()
-            has_invalid = (df['status'] != 'VALID').any()
+            has_valid = (df["status"] == "VALID").any()
+            has_invalid = (df["status"] != "VALID").any()
             if has_valid and has_invalid:
                 logger.info("Training ML model from historical results.csv...")
                 predictor.fit(df)
@@ -51,71 +52,74 @@ def startup_event():
     else:
         logger.warning(f"No historical data at {csv_path}. Model will return N/A for risk.")
 
+
 @app.post("/api/analyze")
 async def analyze_xml(file: UploadFile = File(...)):
-    if not file.filename.endswith('.xml'):
+    if not file.filename or not file.filename.lower().endswith(".xml"):
         raise HTTPException(status_code=400, detail="Only .xml files are supported")
-    
+
     # Save uploaded file temporarily so our existing pipeline can read it
+    temp_file_path = None
     try:
         content = await file.read()
         with tempfile.NamedTemporaryFile(delete=False, suffix=".xml") as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
-            
+
         # 1. Ingest
         raw_record = XMLLoader.parse_file(temp_file_path)
         if raw_record is None:
             raise HTTPException(status_code=400, detail="Invalid or malformed XML file")
-            
-        raw_record['_source_file'] = file.filename
-        
+
+        raw_record["_source_file"] = file.filename
+
         # 2. Standardize
         standardized = XMLParser.standardize(raw_record)
-        
+
         # 3. Validate
         status, errors = Validator.validate(standardized)
-        
+
         # 4. Extract Features
         features = FeatureExtractor.extract_features(standardized, file_path=temp_file_path)
-        
-        # Clean up temp file
-        os.remove(temp_file_path)
-        
+
         # 5. Predict Risk
         risk_score = "N/A"
         risk_flag = "N/A"
-        
+
         # Check if predictor has been fitted (it has a fitted_ model attribute if using sklearn)
-        if hasattr(predictor, 'model') and hasattr(predictor.model, 'classes_'):
+        if hasattr(predictor, "model") and hasattr(predictor.model, "classes_"):
             try:
                 # Prepare features dict
                 pred_features = {col: features.get(col, 0) for col in predictor.feature_columns}
                 pred_result = predictor.predict_risk(pred_features)
-                risk_score = pred_result['risk_score']
-                risk_flag = pred_result['risk_flag']
+                risk_score = pred_result["risk_score"]
+                risk_flag = pred_result["risk_flag"]
             except Exception as e:
                 logger.error(f"Prediction failed: {e}")
-                
+
         response_data = {
             "filename": file.filename,
+            "id": standardized.get("ID", ""),
             "status": status.value,
             "errors": errors,
             "features": features,
-            "prediction": {
-                "risk_score": risk_score,
-                "risk_flag": risk_flag
-            }
+            "prediction": {"risk_score": risk_score, "risk_flag": risk_flag},
         }
-        
+
         # Write to Audit Log
         write_single_audit_log(response_data)
-        
+
         return response_data
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Analysis failed") from e
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
 
 def write_single_audit_log(result: dict):
     """Helper to append a single analysis transaction to the audit log."""
@@ -125,20 +129,18 @@ def write_single_audit_log(result: dict):
     try:
         with open(audit_path, "a", encoding="utf-8") as f:
             log_entry = {
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(UTC).isoformat(),
                 "source_file": result["filename"],
-                "transaction_id": result["features"].get("transaction_id", "N/A"), # Or check fallback
+                "transaction_id": result.get("id") or "N/A",
                 "validation_status": result["status"],
                 "errors": "; ".join(result["errors"]) if result["errors"] else "",
                 "risk_score": result["prediction"]["risk_score"],
-                "risk_flag": result["prediction"]["risk_flag"]
+                "risk_flag": result["prediction"]["risk_flag"],
             }
-            # Fallback if ID wasn't structured inside features dictionary
-            if log_entry["transaction_id"] == "N/A" and "ID" in result:
-                log_entry["transaction_id"] = result["ID"]
             f.write(json.dumps(log_entry) + "\n")
     except Exception as e:
         logger.error(f"Failed to write single audit log: {e}")
+
 
 @app.get("/api/stats")
 async def get_dashboard_stats():
@@ -152,20 +154,21 @@ async def get_dashboard_stats():
             "Requires_Review": 0,
             "Failure_Rate_Percent": 0.0,
             "Average_Risk_Score": 0.0,
-            "Total_High_Risk_Flags": 0
+            "Total_High_Risk_Flags": 0,
         }
-        
+
     try:
         df = pd.read_csv(summary_path)
         if df.empty:
             raise ValueError("Summary CSV is empty")
-        
+
         # Convert first row to dictionary
         stats = df.iloc[0].to_dict()
         return stats
     except Exception as e:
         logger.error(f"Failed to read stats: {e}")
-        raise HTTPException(status_code=500, detail="Failed to load dashboard statistics")
+        raise HTTPException(status_code=500, detail="Failed to load dashboard statistics") from e
+
 
 @app.get("/api/history")
 async def get_history():
@@ -182,7 +185,8 @@ async def get_history():
         return records[::-1]
     except Exception as e:
         logger.error(f"Failed to read history: {e}")
-        raise HTTPException(status_code=500, detail="Failed to load transaction history")
+        raise HTTPException(status_code=500, detail="Failed to load transaction history") from e
+
 
 # Serve the static frontend
 frontend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
