@@ -177,6 +177,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
     // Helper to generate Accordion Card HTML
     function createAccordionItem(item) {
         const itemDiv = document.createElement('div');
@@ -200,18 +206,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorBlock = item.errors 
             ? `<div class="detail-errors">
                  <span class="detail-label error-header">Errors</span>
-                 <p class="detail-error-msg">${item.errors}</p>
+                 <p class="detail-error-msg">${escapeHtml(item.errors)}</p>
                </div>`
             : '';
 
         itemDiv.innerHTML = `
             <div class="accordion-summary">
                 <div class="file-info">
-                    <span class="file-name" title="${item.source_file}">${item.source_file}</span>
-                    <span class="file-id">ID: ${item.id || item.transaction_id || 'N/A'}</span>
+                    <span class="file-name" title="${escapeHtml(item.source_file)}">${escapeHtml(item.source_file)}</span>
+                    <span class="file-id">ID: ${escapeHtml(item.id || 'N/A')}</span>
                 </div>
                 <div class="badge-group">
-                    <span class="badge status-${item.status}">${item.status}</span>
+                    <span class="badge status-${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
                     <span class="badge flag-${riskFlagStr}">${riskScoreStr}</span>
                 </div>
                 <div class="chevron-icon">
@@ -420,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Standardize item and prepend to transaction history
         const historyItem = {
             source_file: data.filename,
-            id: data.features.id || data.features.transaction_id || 'N/A',
+            id: data.id || 'N/A',
             status: data.status,
             errors: data.errors.join('; '),
             missing_fields: data.features.missing_fields,

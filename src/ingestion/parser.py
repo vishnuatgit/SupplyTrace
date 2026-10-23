@@ -3,7 +3,7 @@ class XMLParser:
     Standardizes parsed XML data into a consistent, uppercase-keyed format.
     Intelligently maps deeply nested enterprise keys to standard pipeline keys.
     """
-    
+
     @staticmethod
     def standardize(raw_data: dict) -> dict:
         """
@@ -13,37 +13,45 @@ class XMLParser:
         """
         if not raw_data:
             return {}
-            
+
         standardized_data = {}
         # Keep meta tags untouched
-        if '_source_file' in raw_data:
-            standardized_data['_source_file'] = raw_data['_source_file']
-            
+        if "_source_file" in raw_data:
+            standardized_data["_source_file"] = raw_data["_source_file"]
+
         # First pass: Uppercase everything
         temp_data = {}
         for key, value in raw_data.items():
-            if key != '_source_file':
+            if key != "_source_file":
                 standardized_key = str(key).strip().upper()
                 temp_data[standardized_key] = value.strip() if value else ""
                 standardized_data[standardized_key] = temp_data[standardized_key]
-                
-        # Second pass: Intelligent mapping for ID and AMOUNT
-        mapped_data = {'ID': '', 'AMOUNT': ''}
-        
-        # Mapping definitions
-        id_aliases = ['ID', 'DOCUMENTID', 'INVOICEID', 'TRANSACTIONID']
-        amount_aliases = ['AMOUNT', 'TOTALAMOUNT', 'INVOICEAMOUNT', 'PAYABLEAMOUNT', 'TOTAL']
-        
-        for k, v in temp_data.items():
-            # Extract just the very last tag in a nested path (e.g., 'INVOICE.HEADER.DOCUMENTID' -> 'DOCUMENTID')
-            last_tag = k.split('.')[-1]
-            
-            if last_tag in id_aliases and not mapped_data['ID']:
-                mapped_data['ID'] = v
-            elif last_tag in amount_aliases and not mapped_data['AMOUNT']:
-                mapped_data['AMOUNT'] = v
-                
+
+        # Second pass: map ID and AMOUNT. Specific aliases win over generic ones,
+        # and a generic "ID" only counts near the top of the document, so a
+        # nested account or party ID (e.g. PayeeFinancialAccount.ID) is never
+        # mistaken for the transaction ID.
+        id_aliases = ["TRANSACTIONID", "INVOICEID", "DOCUMENTID", "ID"]
+        amount_aliases = ["PAYABLEAMOUNT", "TOTALAMOUNT", "INVOICEAMOUNT", "AMOUNT", "TOTAL"]
+        max_generic_id_depth = 3
+
+        def first_match(aliases, depth_limit=None):
+            for alias in aliases:
+                for k, v in temp_data.items():
+                    parts = k.split(".")
+                    if parts[-1] != alias or not v:
+                        continue
+                    if depth_limit is not None and alias == "ID" and len(parts) > depth_limit:
+                        continue
+                    return v
+            return ""
+
+        mapped_data = {
+            "ID": first_match(id_aliases, max_generic_id_depth),
+            "AMOUNT": first_match(amount_aliases),
+        }
+
         # Merge mapped fields back
         standardized_data.update(mapped_data)
-                
+
         return standardized_data
