@@ -1,4 +1,4 @@
-from src.validation.rules import Status, Validator
+from src.validation.rules import Status, Validator, parse_amount
 
 
 def test_validation_valid():
@@ -46,3 +46,17 @@ def test_validation_unicode_digit_amount_is_invalid_not_a_crash():
 def test_validation_review_threshold_boundary():
     assert Validator.validate({"ID": "1", "AMOUNT": "1000000"})[0] == Status.VALID
     assert Validator.validate({"ID": "1", "AMOUNT": "1000000.01"})[0] == Status.REQUIRES_REVIEW
+
+
+def test_validation_negative_amount_has_its_own_message():
+    status, errors = Validator.validate({"ID": "001", "AMOUNT": "-250.00"})
+    assert status == Status.INVALID
+    assert errors == ["Invalid value: AMOUNT must not be negative"]
+
+
+def test_parse_amount_kinds():
+    assert parse_amount(None) == ("missing", None)
+    assert parse_amount("  ") == ("missing", None)
+    assert parse_amount("12,50.00") == ("invalid", None)
+    assert parse_amount("-5") == ("negative", -5.0)
+    assert parse_amount(" 99.5 ") == ("ok", 99.5)

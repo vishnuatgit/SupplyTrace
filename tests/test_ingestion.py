@@ -1,8 +1,10 @@
 import os
 import tempfile
 
+import pytest
+
 from src.ingestion.parser import XMLParser
-from src.ingestion.xml_loader import XMLLoader
+from src.ingestion.xml_loader import MAX_DEPTH, XMLLoader, XMLLoadError
 
 
 def test_parse_valid_xml():
@@ -88,3 +90,46 @@ def test_deeply_nested_generic_id_is_not_the_transaction_id():
 
 def test_top_level_generic_id_is_used():
     assert XMLParser.standardize({"Invoice.ID": "INV-9"})["ID"] == "INV-9"
+
+
+def test_parse_bytes_flattens_in_memory():
+    result = XMLLoader.parse_bytes(b"<invoice><id>001</id><amount>500</amount></invoice>")
+    assert result == {"invoice.id": "001", "invoice.amount": "500"}
+
+
+def test_external_entity_is_refused():
+    xxe = (
+        b'<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]>'
+        b"<Invoice><TransactionID>&x;</TransactionID></Invoice>"
+    )
+    with pytest.raises(XMLLoadError, match="DTDs and entity declarations are not allowed"):
+        XMLLoader.parse_bytes(xxe)
+
+
+def test_entity_expansion_is_refused():
+    bomb = (
+        b'<?xml version="1.0"?><!DOCTYPE r [<!ENTITY a "aaaaaaaaaa">'
+        b'<!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]><Invoice>&b;</Invoice>'
+    )
+    with pytest.raises(XMLLoadError):
+        XMLLoader.parse_bytes(bomb)
+
+
+def test_too_deep_nesting_is_refused():
+    depth = MAX_DEPTH + 1
+    xml = ("<a>" * depth + "x" + "</a>" * depth).encode()
+    with pytest.raises(XMLLoadError, match="too deep"):
+        XMLLoader.parse_bytes(xml)
+    # Exactly MAX_DEPTH levels is still accepted.
+    assert XMLLoader.parse_bytes(("<a>" * MAX_DEPTH + "x" + "</a>" * MAX_DEPTH).encode())
+
+
+def test_load_directory_is_sorted(tmp_path):
+    for name in ["b.xml", "a.xml", "c.xml"]:
+        (tmp_path / name).write_text(f"<r><n>{name}</n></r>")
+    (tmp_path / "notes.txt").write_text("ignored")
+    assert [r["_source_file"] for r in XMLLoader.load_directory(str(tmp_path))] == [
+        "a.xml",
+        "b.xml",
+        "c.xml",
+    ]

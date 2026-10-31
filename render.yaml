@@ -1,0 +1,15 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Free web service. The disk is ephemeral, so the synthetic batch is generated
+# at build time (and regenerated on startup if it is ever missing).
+services:
+  - type: web
+    name: supplytrace
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt && python -m scripts.generate_data && python -m scripts.run_pipeline
+    startCommand: uvicorn src.api.server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9

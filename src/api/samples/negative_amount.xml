@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<StandardBusinessDocument xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+    <StandardBusinessDocumentHeader>
+        <HeaderVersion>1.0</HeaderVersion>
+        <Sender>
+            <Identifier Authority="DUNS">123456789</Identifier>
+        </Sender>
+        <Receiver>
+            <Identifier Authority="GLN">987654321</Identifier>
+        </Receiver>
+    </StandardBusinessDocumentHeader>
+    <Invoice>
+        <DocumentReference>
+            <TransactionID>TXN-48185</TransactionID>
+        </DocumentReference>
+        <IssueDate>2026-10-14</IssueDate>
+        <DocumentCurrencyCode>USD</DocumentCurrencyCode>
+        <AccountingSupplierParty>
+            <Party>
+                <PartyName>
+                    <Name>Acme Corp Global</Name>
+                </PartyName>
+            </Party>
+        </AccountingSupplierParty>
+        <PaymentMeans>
+            <PayeeFinancialAccount>
+                <ID>IBAN-4410029384</ID>
+            </PayeeFinancialAccount>
+        </PaymentMeans>
+        <InvoiceLine>
+            <ID>1</ID>
+            <InvoicedQuantity>120</InvoicedQuantity>
+            <LineExtensionAmount currencyID="USD">1450.20</LineExtensionAmount>
+            <Item>
+                <Name>Steel fasteners</Name>
+            </Item>
+        </InvoiceLine>
+        <InvoiceLine>
+            <ID>2</ID>
+            <InvoicedQuantity>45</InvoicedQuantity>
+            <LineExtensionAmount currencyID="USD">1417.50</LineExtensionAmount>
+            <Item>
+                <Name>Packaging film</Name>
+            </Item>
+        </InvoiceLine>
+        <LegalMonetaryTotal>
+            <PayableAmount currencyID="USD">-2867.70</PayableAmount>
+        </LegalMonetaryTotal>
+    </Invoice>
+</StandardBusinessDocument>

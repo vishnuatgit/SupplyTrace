@@ -1,46 +1,73 @@
 import os
 
+from src.validation.rules import REVIEW_THRESHOLD, parse_amount
+
+# Amounts at or above this are unusual for the synthetic suppliers, though still valid.
+LARGE_AMOUNT = 100_000
+
+# Optional invoice fields. A field counts as present when any segment of a
+# populated flattened key matches one of its tag names (keys are uppercased).
+OPTIONAL_FIELDS = {
+    "issue_date": {"ISSUEDATE", "INVOICEDATE"},
+    "currency": {"DOCUMENTCURRENCYCODE", "CURRENCYCODE", "CURRENCY"},
+    "supplier": {"ACCOUNTINGSUPPLIERPARTY", "SUPPLIER", "SUPPLIERNAME", "SELLER", "SELLERPARTY"},
+    "payment_account": {"PAYEEFINANCIALACCOUNT", "IBAN", "BANKACCOUNT"},
+}
+
+# Keys added by XMLParser.standardize rather than taken from the document.
+_MAPPED_KEYS = {"ID", "AMOUNT", "_source_file"}
+
 
 class FeatureExtractor:
     """
-    Extracts features from standardized records for the ML prediction model.
+    Extracts risk signals from standardized records for the ML prediction model.
     """
 
     EXPECTED_FIELDS = {"ID", "AMOUNT"}
 
     @staticmethod
-    def extract_features(record: dict, file_path: str = None) -> dict:
+    def extract_features(record: dict, file_path: str = None, xml_size: int = None) -> dict:
         """
-        Extracts features like missing_fields, xml_size, and processing_time.
+        Extracts the model features (see RiskPredictor.FEATURE_COLUMNS) plus two
+        display-only values: missing_fields and xml_size.
         """
         features = {}
 
-        # 1. Missing Fields
-        # Count how many expected fields are missing or empty
-        missing_count = 0
-        for field in FeatureExtractor.EXPECTED_FIELDS:
-            if not record.get(field) or not str(record.get(field)).strip():
-                missing_count += 1
-        features["missing_fields"] = missing_count
+        # 1. Required fields: transaction ID and amount
+        missing_id = not record.get("ID") or not str(record.get("ID")).strip()
+        amount_kind, amount = parse_amount(record.get("AMOUNT"))
+        features["missing_id"] = int(missing_id)
+        features["missing_amount"] = int(amount_kind == "missing")
+        features["amount_not_numeric"] = int(amount_kind == "invalid")
+        features["amount_negative"] = int(amount_kind == "negative")
 
-        # 2. XML Size (in bytes)
-        # If file_path is provided and exists, get its size, else mock a size based on content length
-        if file_path and os.path.exists(file_path):
+        # 2. Amount size: above the review limit, or merely large
+        features["amount_above_review_limit"] = int(
+            amount_kind == "ok" and amount > REVIEW_THRESHOLD
+        )
+        features["large_amount"] = int(amount_kind == "ok" and amount >= LARGE_AMOUNT)
+
+        # 3. Structure: optional fields left out, and how deep the content sits
+        segments = [
+            key.split(".")
+            for key, value in record.items()
+            if key not in _MAPPED_KEYS and value and str(value).strip()
+        ]
+        present = {
+            name
+            for name, tags in OPTIONAL_FIELDS.items()
+            if any(tags.intersection(parts) for parts in segments)
+        }
+        features["missing_optional_fields"] = len(OPTIONAL_FIELDS) - len(present)
+        features["nesting_depth"] = max((len(parts) for parts in segments), default=0)
+
+        # Display only: count of missing required fields, and payload size in bytes
+        features["missing_fields"] = features["missing_id"] + features["missing_amount"]
+        if xml_size is not None:
+            features["xml_size"] = xml_size
+        elif file_path and os.path.exists(file_path):
             features["xml_size"] = os.path.getsize(file_path)
         else:
-            # Mock size if file doesn't exist
             features["xml_size"] = len(str(record))
-
-        # 3. Processing Time (Simulated)
-        # In a real system, this would be measured downstream. Here it is a
-        # deterministic simulation from missing fields and size, so features
-        # (and the model trained on them) are reproducible.
-        base_time = 10.0
-        penalty = missing_count * 50.0 + (features["xml_size"] * 0.1)
-        features["processing_time"] = round(base_time + penalty, 2)
-
-        # 4. Retry Attempts (Simulated)
-        # If there are missing fields, sometimes retries happen.
-        features["retry_attempts"] = 1 if missing_count > 0 else 0
 
         return features

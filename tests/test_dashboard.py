@@ -33,8 +33,9 @@ def test_dashboard_export(tmpdir):
     # 1 invalid out of 4 = 25% failure rate
     assert summary_df.iloc[0]["Failure_Rate_Percent"] == 25.0
 
-    # average of 10.5, 85.0, 65.5 = 53.67
+    # average of 10.5, 85.0, 65.5 = 53.67, over the 3 scored rows
     assert summary_df.iloc[0]["Average_Risk_Score"] == 53.67
+    assert summary_df.iloc[0]["Scored_Transactions"] == 3
 
     # 2 high risk flags
     assert summary_df.iloc[0]["Total_High_Risk_Flags"] == 2

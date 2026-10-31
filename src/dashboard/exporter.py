@@ -45,6 +45,7 @@ class DashboardExporter:
             if total_processed > 0
             else 0,
             "Average_Risk_Score": round(avg_risk_score, 2),
+            "Scored_Transactions": len(numeric_risks),
             "Total_High_Risk_Flags": high_risk_flags,
         }
 

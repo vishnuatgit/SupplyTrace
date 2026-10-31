@@ -3,9 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SupplyTrace | Enterprise XML Analytics & Risk Prediction</title>
-    <link rel="stylesheet" href="styles.css?v=2.5">
+    <title>SupplyTrace | Supplier XML Invoice Validation Demo</title>
+    <meta name="description" content="SupplyTrace validates supplier XML invoices with deterministic rules (VALID, INVALID or REQUIRES_REVIEW) and adds an experimental risk score from a Random Forest trained on synthetic data. A portfolio project by Vishnu Jayanth.">
+    <meta name="theme-color" content="#06090e">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="SupplyTrace">
+    <meta property="og:title" content="SupplyTrace: supplier XML invoice validation">
+    <meta property="og:description" content="Upload or pick a sample XML invoice and see it flattened, validated (VALID / INVALID / REQUIRES_REVIEW) and scored by an experimental Random Forest. Built with FastAPI and scikit-learn by Vishnu Jayanth.">
+    <meta name="twitter:card" content="summary">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=3.0">
 </head>
 <body>
     <div class="background-glows">
@@ -16,105 +26,134 @@
     <div class="dashboard-wrapper">
         <header class="dashboard-header">
             <div class="header-logo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="logo-icon" aria-hidden="true">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
                 </svg>
                 <div class="logo-text">
                     <h1>SupplyTrace</h1>
-                    <span class="system-status">
-                        <span class="status-dot"></span>
-                        Enterprise Core Engine Active
-                    </span>
+                    <span class="system-status">Supplier XML invoice validation &middot; demo</span>
                 </div>
             </div>
-            <div class="header-tagline">
-                <p>Real-Time Ingestion, Validation & ML Processing Risk Diagnostics</p>
-            </div>
+            <nav class="header-links" aria-label="Project links">
+                <a href="https://github.com/vishnuatgit/SupplyTrace" target="_blank" rel="noopener">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                    Source on GitHub
+                </a>
+                <a href="https://vishnuatgit.github.io" target="_blank" rel="noopener" class="author-link">Built by Vishnu Jayanth</a>
+            </nav>
         </header>
 
-        <!-- KPI Metrics Ribbon -->
-        <section class="metrics-ribbon" id="dashboard-stats">
-            <div class="metric-card glass-panel" data-tooltip="Total volume of processed XML transaction payloads.">
-                <div class="metric-info">
-                    <h3>Total Processed</h3>
-                    <p class="metric-value" id="stat-total">0</p>
-                </div>
-                <div class="metric-icon-bg total-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-                </div>
-            </div>
-            <div class="metric-card glass-panel" data-tooltip="Percentage of payloads flagged as INVALID by validation rules.">
-                <div class="metric-info">
-                    <h3>System Failure Rate</h3>
-                    <p class="metric-value error-text" id="stat-failure">0%</p>
-                </div>
-                <div class="metric-icon-bg failure-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                </div>
-            </div>
-            <div class="metric-card glass-panel" data-tooltip="Average computed risk probability by the Machine Learning model.">
-                <div class="metric-info">
-                    <h3>Avg. Risk Score</h3>
-                    <p class="metric-value warning-text" id="stat-risk">0%</p>
-                </div>
-                <div class="metric-icon-bg risk-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                </div>
-            </div>
-            <div class="metric-card glass-panel" data-tooltip="Total count of transactions flagged as HIGH RISK by the RandomForest model.">
-                <div class="metric-info">
-                    <h3>High Risk Flags</h3>
-                    <p class="metric-value danger-text" id="stat-flags">0</p>
-                </div>
-                <div class="metric-icon-bg flags-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="11"></line></svg>
-                </div>
-            </div>
+        <section class="intro" aria-label="About this demo">
+            <p class="intro-lead">
+                Check a supplier XML invoice in one click. SupplyTrace flattens the nested XML, finds the transaction ID and amount wherever they sit, and applies deterministic rules that label the file
+                <span class="inline-status status-VALID">VALID</span>,
+                <span class="inline-status status-INVALID">INVALID</span> or
+                <span class="inline-status status-REQUIRES_REVIEW">REQUIRES_REVIEW</span>.
+                A small Random Forest adds an experimental risk score, and every analysis is written to a JSON Lines audit log.
+            </p>
+            <p class="intro-note">
+                <span class="pill">Synthetic data</span>
+                The dashboard starts from a batch of generated invoices, and the risk model is trained on them. Nothing here is real supplier data, so please don't upload real invoices.
+            </p>
         </section>
 
         <!-- Main Dashboard Workspace Layout -->
         <main class="dashboard-grid">
-            
+
+            <!-- KPI Metrics Ribbon -->
+            <div class="kpi-block">
+                <section class="metrics-ribbon" id="dashboard-stats" aria-label="Totals">
+                    <div class="metric-card glass-panel" data-tooltip="Invoices analysed: the synthetic batch plus your analyses in this session.">
+                        <div class="metric-info">
+                            <h3>Analysed</h3>
+                            <p class="metric-value" id="stat-total">0</p>
+                        </div>
+                        <div class="metric-icon-bg total-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel" data-tooltip="Share of analysed invoices that the validation rules marked INVALID.">
+                        <div class="metric-info">
+                            <h3>Invalid Rate</h3>
+                            <p class="metric-value error-text" id="stat-failure">0%</p>
+                        </div>
+                        <div class="metric-icon-bg failure-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel" data-tooltip="Average risk score from the experimental model, which is trained on synthetic data.">
+                        <div class="metric-info">
+                            <h3>Avg. Risk Score</h3>
+                            <p class="metric-value warning-text" id="stat-risk">0%</p>
+                        </div>
+                        <div class="metric-icon-bg risk-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel" data-tooltip="Invoices the experimental model scored above 50% risk.">
+                        <div class="metric-info">
+                            <h3>High Risk Flags</h3>
+                            <p class="metric-value danger-text" id="stat-flags">0</p>
+                        </div>
+                        <div class="metric-icon-bg flags-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="11"></line></svg>
+                        </div>
+                    </div>
+                </section>
+                <p class="stats-caption" id="stats-caption">Loading totals&hellip;</p>
+            </div>
+
             <!-- Left Column: Ingestion & Live Editor/Sandbox -->
             <div class="grid-column left-column">
-                <section class="glass-panel inspector-panel">
+                <section class="glass-panel inspector-panel" aria-labelledby="inspector-title">
                     <div class="panel-header">
-                        <h2>Payload Inspector</h2>
-                        <div class="tab-selectors">
-                            <button id="tab-upload-btn" class="tab-btn active">
+                        <h2 id="inspector-title">Payload Inspector</h2>
+                        <div class="tab-selectors" role="tablist" aria-label="Input method">
+                            <button id="tab-upload-btn" class="tab-btn active" role="tab" aria-selected="true" aria-controls="pane-upload">
                                 Upload File
                             </button>
-                            <button id="tab-sandbox-btn" class="tab-btn">
+                            <button id="tab-sandbox-btn" class="tab-btn" role="tab" aria-selected="false" aria-controls="pane-sandbox">
                                 Sandbox Editor
                             </button>
                         </div>
                     </div>
 
+                    <!-- One-click sample invoices -->
+                    <div class="sample-bar">
+                        <span class="sample-label">Try a sample</span>
+                        <div class="sample-chips" id="sample-chips">
+                            <span class="sample-placeholder">Loading samples&hellip;</span>
+                        </div>
+                    </div>
+
+                    <!-- Inline error message -->
+                    <div id="inspector-error" class="inline-error hidden" role="alert"></div>
+
                     <!-- Upload File Tab Pane -->
-                    <div id="pane-upload" class="tab-pane active">
+                    <div id="pane-upload" class="tab-pane" role="tabpanel" aria-labelledby="tab-upload-btn">
                         <div class="upload-zone" id="drop-zone">
                             <div class="upload-icon">
-                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                     <polyline points="17 8 12 3 7 8"></polyline>
                                     <line x1="12" y1="3" x2="12" y2="15"></line>
                                 </svg>
                             </div>
-                            <h3>Drag & Drop XML Transaction</h3>
-                            <p>Upload a supplier invoice to analyze validation & risk</p>
-                            <input type="file" id="file-input" accept=".xml" hidden>
+                            <h3>Drag &amp; Drop an XML Invoice</h3>
+                            <p>Validated and scored on the server. XML only, up to 1&nbsp;MB.</p>
+                            <input type="file" id="file-input" accept=".xml,text/xml,application/xml" hidden>
                             <button id="browse-btn" class="btn-primary-outline">Select File</button>
                         </div>
                     </div>
 
                     <!-- Sandbox Editor Tab Pane -->
-                    <div id="pane-sandbox" class="tab-pane">
+                    <div id="pane-sandbox" class="tab-pane hidden" role="tabpanel" aria-labelledby="tab-sandbox-btn">
                         <div class="sandbox-container">
                             <div class="sandbox-header">
-                                <span class="editor-filename">sandbox_invoice.xml</span>
+                                <span class="editor-filename" id="editor-filename">sandbox_invoice.xml</span>
                                 <button id="load-template-btn" class="btn-text-only">Load Valid Template</button>
                             </div>
-                            <textarea id="xml-editor" placeholder="Paste or edit raw UBL XML content here..." spellcheck="false"></textarea>
+                            <textarea id="xml-editor" aria-label="XML invoice" wrap="off" placeholder="Paste or edit raw UBL XML content here..." spellcheck="false"></textarea>
                             <div class="sandbox-actions">
                                 <button id="analyze-sandbox-btn" class="btn-primary">Analyze Payload</button>
                             </div>
@@ -125,46 +164,72 @@
                     <div id="loading" class="hidden">
                         <div class="spinner-container">
                             <div class="spinner"></div>
-                            <p>Evaluating rules & computing ML risk vectors...</p>
+                            <p>Validating and scoring&hellip;</p>
                         </div>
                     </div>
 
                     <!-- Analysis Output Panel -->
-                    <div id="results" class="results-container hidden">
-                        <div class="result-card-header">
-                            <h3 id="res-filename">filename.xml</h3>
-                            <span id="res-status" class="status-badge">VALID</span>
+                    <div id="results" class="results-view hidden">
+                        <div class="submitted-xml">
+                            <div class="submitted-header">
+                                <span class="sub-label">Submitted XML</span>
+                                <span class="editor-filename" id="res-xml-meta"></span>
+                                <button id="edit-xml-btn" class="btn-text-only">Edit in sandbox</button>
+                            </div>
+                            <pre id="res-xml" class="xml-preview" tabindex="0" aria-label="Submitted XML"></pre>
                         </div>
-                        
-                        <div class="metrics-subgrid">
-                            <div class="sub-metric">
-                                <span class="sub-label">Risk Probability</span>
+
+                        <div class="results-container">
+                            <div class="result-card-header">
+                                <h3 id="res-filename">filename.xml</h3>
+                                <span id="res-status" class="status-badge">VALID</span>
+                            </div>
+                            <p id="res-summary" class="result-summary"></p>
+
+                            <div id="res-errors-container" class="errors-box hidden">
+                                <span class="sub-label error-header" id="res-errors-title">Validation Failures</span>
+                                <ul id="res-errors" class="reason-list"></ul>
+                            </div>
+
+                            <div class="risk-block">
+                                <div class="risk-head">
+                                    <span class="sub-label">Risk Score</span>
+                                    <span class="experimental-tag">Experimental</span>
+                                </div>
                                 <div class="risk-meter-wrapper">
                                     <span id="res-risk-score" class="sub-value risk-val">0%</span>
                                     <span id="res-risk-flag" class="flag-badge">LOW</span>
                                 </div>
+                                <div class="risk-bar"><div id="res-risk-bar" class="risk-bar-fill"></div></div>
+                                <p class="risk-note">Estimated by a Random Forest trained on synthetic invoices. The validation status above is the authoritative result.</p>
                             </div>
-                            <div class="sub-metric">
-                                <span class="sub-label">Missing Fields</span>
-                                <span id="res-missing" class="sub-value text-highlight">0</span>
+
+                            <div class="metrics-subgrid">
+                                <div class="sub-metric">
+                                    <span class="sub-label">Missing Required</span>
+                                    <span id="res-missing" class="sub-value text-highlight">0</span>
+                                </div>
+                                <div class="sub-metric">
+                                    <span class="sub-label">Missing Optional</span>
+                                    <span id="res-optional" class="sub-value">0</span>
+                                </div>
+                                <div class="sub-metric">
+                                    <span class="sub-label">Nesting Depth</span>
+                                    <span id="res-depth" class="sub-value">0</span>
+                                </div>
+                                <div class="sub-metric">
+                                    <span class="sub-label">File Size</span>
+                                    <span id="res-size" class="sub-value">0 B</span>
+                                </div>
+                                <div class="sub-metric">
+                                    <span class="sub-label">Server Time</span>
+                                    <span id="res-time" class="sub-value">0 ms</span>
+                                </div>
                             </div>
-                            <div class="sub-metric">
-                                <span class="sub-label">File Size</span>
-                                <span id="res-size" class="sub-value">0 B</span>
+
+                            <div class="result-actions">
+                                <button id="reset-btn" class="btn-secondary">Analyze Another</button>
                             </div>
-                            <div class="sub-metric">
-                                <span class="sub-label">Latency</span>
-                                <span id="res-time" class="sub-value">0 ms</span>
-                            </div>
-                        </div>
-                        
-                        <div id="res-errors-container" class="errors-box hidden">
-                            <span class="sub-label error-header">Validation Failures</span>
-                            <p id="res-errors" class="error-msg"></p>
-                        </div>
-                        
-                        <div class="result-actions">
-                            <button id="reset-btn" class="btn-secondary">Clear Inspector</button>
                         </div>
                     </div>
                 </section>
@@ -172,27 +237,27 @@
 
             <!-- Right Column: Visual Charts & Transaction Log -->
             <div class="grid-column right-column">
-                
+
                 <!-- SVG Graphs/Analytics Card -->
                 <section class="glass-panel analytics-panel">
-                    <h2>Analytics & Health Metrics</h2>
+                    <h2>Validation &amp; Risk Overview</h2>
                     <div class="charts-row">
                         <!-- Chart 1: Circular Health Dial -->
                         <div class="chart-wrapper">
-                            <span class="chart-title">System Compliance Health</span>
+                            <span class="chart-title">Valid Share</span>
                             <div class="radial-gauge">
-                                <svg width="120" height="120" viewBox="0 0 120 120">
+                                <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
                                     <circle class="gauge-bg" cx="60" cy="60" r="50"></circle>
                                     <circle id="gauge-fill" class="gauge-fill" cx="60" cy="60" r="50" transform="rotate(-90 60 60)"></circle>
                                 </svg>
                                 <div class="gauge-value" id="gauge-val">0%</div>
                             </div>
-                            <span class="chart-caption">Valid transactions vs total</span>
+                            <span class="chart-caption">VALID invoices out of all analysed</span>
                         </div>
 
                         <!-- Chart 2: Risk Profile Spread -->
                         <div class="chart-wrapper">
-                            <span class="chart-title">Risk Flags Distribution</span>
+                            <span class="chart-title">Risk Flags (Experimental)</span>
                             <div class="distribution-bars">
                                 <div class="dist-bar-item">
                                     <span class="dist-label">Low Risk</span>
@@ -213,25 +278,31 @@
                     </div>
                 </section>
 
-                <!-- Scrollbar-free Interactive Activity Feed -->
+                <!-- Transaction Log -->
                 <section class="glass-panel history-panel">
                     <div class="panel-header">
-                        <h2>Live Transaction Log</h2>
-                        <span class="feed-indicator">
-                            <span class="pulse-dot"></span>
-                            Real-time updates
-                        </span>
+                        <h2>Recent Analyses</h2>
+                        <span class="feed-indicator">Your session first, then the latest batch rows</span>
                     </div>
                     <div class="accordion-feed" id="history-feed">
                         <!-- Filled dynamically with interactive cards -->
-                        <div class="feed-empty-state">No transaction logs loaded.</div>
+                        <div class="feed-empty-state">Loading analyses&hellip;</div>
                     </div>
                 </section>
             </div>
-            
+
         </main>
+
+        <footer class="site-footer">
+            <p>
+                Built by <a href="https://vishnuatgit.github.io" target="_blank" rel="noopener">Vishnu Jayanth</a>
+                &middot; <a href="https://github.com/vishnuatgit/SupplyTrace" target="_blank" rel="noopener">Source on GitHub</a>
+                &middot; MIT licence
+            </p>
+            <p>Demo on synthetic data. Uploaded files are parsed in memory and not stored; the audit log keeps the filename, transaction ID, validation result and risk score.</p>
+        </footer>
     </div>
 
-    <script src="app.js?v=2.1"></script>
+    <script src="app.js?v=3.0"></script>
 </body>
 </html>

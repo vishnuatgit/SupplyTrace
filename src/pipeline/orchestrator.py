@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from datetime import UTC, datetime
@@ -9,7 +8,9 @@ from src.dashboard.exporter import DashboardExporter
 from src.features.extractor import FeatureExtractor
 from src.ingestion.parser import XMLParser
 from src.ingestion.xml_loader import XMLLoader
+from src.pipeline.synthetic import OUTCOMES_FILE
 from src.prediction.model import RiskPredictor
+from src.utils.audit import append_audit_entries
 from src.validation.rules import Validator
 
 logger = logging.getLogger(__name__)
@@ -21,12 +22,12 @@ class PipelineOrchestrator:
     Ingestion -> Parsing -> Validation -> Feature Extraction -> Prediction -> Persistence
     """
 
-    def __init__(self, raw_data_dir: str, results_csv_path: str):
+    def __init__(self, raw_data_dir: str, results_csv_path: str, audit_log_path: str = None):
         self.raw_data_dir = raw_data_dir
         self.results_csv_path = results_csv_path
-        self.dashboard_csv_path = os.path.join(
-            os.path.dirname(results_csv_path), "powerbi_summary.csv"
-        )
+        results_dir = os.path.dirname(results_csv_path)
+        self.dashboard_csv_path = os.path.join(results_dir, "powerbi_summary.csv")
+        self.audit_log_path = audit_log_path or os.path.join(results_dir, "audit_log.jsonl")
         self.predictor = RiskPredictor()
 
     def process_record(self, raw_record: dict) -> dict:
@@ -46,25 +47,32 @@ class PipelineOrchestrator:
         row.update(features)
         return row
 
+    def attach_labels(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adds the training label column 'failed'. Outcomes come from outcomes.csv
+        in the input folder (written by the synthetic data generator); files
+        without a recorded outcome count as failed unless their status is VALID.
+        """
+        fallback = (df["status"] != "VALID").astype(int)
+        outcomes_path = os.path.join(self.raw_data_dir, OUTCOMES_FILE)
+        if os.path.exists(outcomes_path):
+            outcomes = pd.read_csv(outcomes_path)
+            recorded_by_file = dict(zip(outcomes["source_file"], outcomes["failed"], strict=True))
+            recorded = df["source_file"].map(recorded_by_file)
+            df["failed"] = recorded.fillna(fallback).astype(int)
+        else:
+            df["failed"] = fallback
+        return df
+
     def train_and_predict(self, df: pd.DataFrame) -> pd.DataFrame:
         """Trains the ML model if possible and appends predictions."""
-        has_valid = (df["status"] == "VALID").any()
-        has_invalid = (df["status"] != "VALID").any()
+        logger.info("Training RiskPredictor on batch data...")
+        self.predictor.fit(df)
 
-        if has_valid and has_invalid:
-            logger.info("Training RiskPredictor on batch data...")
-            self.predictor.fit(df)
-
-            risk_scores = []
-            risk_flags = []
-            for _, row in df.iterrows():
-                features = {col: row[col] for col in self.predictor.feature_columns}
-                pred = self.predictor.predict_risk(features)
-                risk_scores.append(pred["risk_score"])
-                risk_flags.append(pred["risk_flag"])
-
-            df["risk_score"] = risk_scores
-            df["risk_flag"] = risk_flags
+        if self.predictor.is_trained:
+            predictions = self.predictor.predict_risk_batch(df)
+            df["risk_score"] = [p["risk_score"] for p in predictions]
+            df["risk_flag"] = [p["risk_flag"] for p in predictions]
         else:
             logger.warning(
                 "Not enough class diversity to train model. Defaulting risk scores to N/A."
@@ -74,22 +82,25 @@ class PipelineOrchestrator:
 
         return df
 
-    def run(self):
-        """Executes the full pipeline run."""
+    def run(self) -> pd.DataFrame:
+        """Executes the full pipeline run and returns the results table."""
         logger.info("Starting Core Pipeline...")
         raw_records = XMLLoader.load_directory(self.raw_data_dir)
         logger.info(f"Loaded {len(raw_records)} XML files.")
 
         if not raw_records:
             logger.warning("No records to process.")
-            return
+            return None
 
         results = [self.process_record(rec) for rec in raw_records]
 
         df = pd.DataFrame(results)
+        df = self.attach_labels(df)
         df = self.train_and_predict(df)
 
-        os.makedirs(os.path.dirname(self.results_csv_path), exist_ok=True)
+        results_dir = os.path.dirname(self.results_csv_path)
+        if results_dir:
+            os.makedirs(results_dir, exist_ok=True)
         df.to_csv(self.results_csv_path, index=False)
         logger.info(f"Pipeline complete. Saved {len(df)} records to {self.results_csv_path}.")
 
@@ -98,23 +109,22 @@ class PipelineOrchestrator:
 
         # Write Audit Log
         self.write_audit_log(df)
+        return df
 
     def write_audit_log(self, df: pd.DataFrame):
-        """Writes a production-ready JSON audit trail for compliance tracking."""
-        audit_path = os.path.join(os.path.dirname(self.results_csv_path), "audit_log.jsonl")
-        try:
-            with open(audit_path, "a", encoding="utf-8") as f:
-                for _, row in df.iterrows():
-                    log_entry = {
-                        "timestamp": datetime.now(UTC).isoformat(),
-                        "source_file": row["source_file"],
-                        "transaction_id": row["id"],
-                        "validation_status": row["status"],
-                        "errors": row["errors"] if pd.notna(row["errors"]) else "",
-                        "risk_score": row["risk_score"],
-                        "risk_flag": row["risk_flag"],
-                    }
-                    f.write(json.dumps(log_entry) + "\n")
-            logger.info(f"Audit trail written to {audit_path}")
-        except Exception as e:
-            logger.error(f"Failed to write audit log: {e}")
+        """Appends one JSON audit entry per processed file (best effort)."""
+        timestamp = datetime.now(UTC).isoformat()
+        entries = [
+            {
+                "timestamp": timestamp,
+                "source_file": row["source_file"],
+                "transaction_id": row["id"],
+                "validation_status": row["status"],
+                "errors": row["errors"] if pd.notna(row["errors"]) else "",
+                "risk_score": row["risk_score"],
+                "risk_flag": row["risk_flag"],
+            }
+            for _, row in df.iterrows()
+        ]
+        if append_audit_entries(self.audit_log_path, entries):
+            logger.info(f"Audit trail written to {self.audit_log_path}")

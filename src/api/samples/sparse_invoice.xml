@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<StandardBusinessDocument xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+    <StandardBusinessDocumentHeader>
+        <HeaderVersion>1.0</HeaderVersion>
+        <Sender>
+            <Identifier Authority="DUNS">123456789</Identifier>
+        </Sender>
+        <Receiver>
+            <Identifier Authority="GLN">987654321</Identifier>
+        </Receiver>
+    </StandardBusinessDocumentHeader>
+    <Invoice>
+        <DocumentReference>
+            <TransactionID>TXN-48181</TransactionID>
+        </DocumentReference>
+        <InvoiceLine>
+            <ID>1</ID>
+            <InvoicedQuantity>30</InvoicedQuantity>
+            <LineExtensionAmount>642.00</LineExtensionAmount>
+            <Item>
+                <Name>Safety gloves</Name>
+            </Item>
+        </InvoiceLine>
+        <LegalMonetaryTotal>
+            <PayableAmount>642.00</PayableAmount>
+        </LegalMonetaryTotal>
+    </Invoice>
+</StandardBusinessDocument>
