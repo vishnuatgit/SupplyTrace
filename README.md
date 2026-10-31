@@ -11,7 +11,7 @@ Bad invoice data rarely fails where it arrives. It fails later, several systems 
 
 ## Live demo
 
-**TODO: Render URL**
+**[supplytrace-fkpq.onrender.com](https://supplytrace-fkpq.onrender.com)** (free hosting: the first visit can take about a minute to wake it up). Try **Batch → Check the 7 sample invoices**.
 
 Pick one of the sample invoices (valid, sparse, missing ID, missing amount, bad amount, negative amount, high value), drop your own XML file (up to 1 MB), edit XML in the sandbox, or check a batch of up to 20 files. The demo runs on Render's free tier, which puts the service to sleep after 15 minutes without traffic, so the first request after a quiet spell can take up to a minute.
 
@@ -154,7 +154,7 @@ The repository includes a [Render Blueprint](render.yaml) for a free web service
 
 1. Push the repository to GitHub.
 2. In the Render dashboard choose **New > Blueprint**, select the repository and apply `render.yaml`.
-3. When the deploy finishes, open the service URL and replace the `TODO` under [Live demo](#live-demo).
+3. When the deploy finishes, open the service URL and put it under [Live demo](#live-demo).
 
 The Blueprint uses these settings, which can also be entered by hand for a plain web service:
 
