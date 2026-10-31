@@ -8,7 +8,6 @@ Bad invoice data rarely fails where it arrives. It fails later, several systems 
 
 [![CI](https://github.com/vishnuatgit/SupplyTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnuatgit/SupplyTrace/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## Live demo
 
@@ -239,6 +238,6 @@ SupplyTrace/
 - The model is retrained at every startup; there is no saved, versioned model.
 - No accounts or authentication. It is a demo, not a multi-user service.
 
-## License
+## Author
 
-[MIT](LICENSE) © 2026 Chandana Vishnu Jayanth
+Built by Chandana Vishnu Jayanth · [Portfolio](https://vishnuatgit.github.io)
