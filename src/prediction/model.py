@@ -1,5 +1,6 @@
 import logging
 
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
@@ -92,3 +93,42 @@ class RiskPredictor:
             flag = "HIGH" if risk_score > self.HIGH_RISK_THRESHOLD else "LOW"
             results.append({"risk_score": risk_score, "risk_flag": flag})
         return results
+
+    def explain(self, features: dict) -> dict:
+        """
+        Why one file got its risk score: the score split into the training base
+        rate plus one contribution per feature, in percentage points.
+
+        Each tree is followed from its root to the leaf the file lands in. Every
+        split moves the tree's estimate of the failure rate up or down, and that
+        change is credited to the feature the split tested. Averaged over the
+        forest, base + sum(contributions) equals the score (up to rounding).
+        """
+        if not self.is_trained:
+            raise RuntimeError("Model must be trained before explaining.")
+
+        row = np.asarray([[features[name] for name in self.feature_columns]], dtype=np.float32)
+        failed_class = list(self.model.classes_).index(1)
+        base = 0.0
+        contributions = np.zeros(len(self.feature_columns))
+
+        for estimator in self.model.estimators_:
+            tree = estimator.tree_
+            # Node ids grow from the root down, so the sorted ids are the path in order.
+            nodes = np.sort(tree.decision_path(row).indices)
+            counts = tree.value[nodes, 0, :]
+            failure_rate = counts[:, failed_class] / counts.sum(axis=1)
+            base += failure_rate[0]
+            np.add.at(contributions, tree.feature[nodes[:-1]], np.diff(failure_rate))
+
+        trees = len(self.model.estimators_)
+        drivers = [
+            {
+                "feature": name,
+                "value": int(features[name]),
+                "points": round(float(contribution / trees) * 100, 2),
+            }
+            for name, contribution in zip(self.feature_columns, contributions, strict=True)
+        ]
+        drivers.sort(key=lambda d: abs(d["points"]), reverse=True)
+        return {"base": round(float(base / trees) * 100, 2), "contributions": drivers}

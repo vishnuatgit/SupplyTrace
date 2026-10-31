@@ -54,6 +54,8 @@ EXPECTED_STATUS = {
     "high_value": "REQUIRES_REVIEW",
 }
 OPTIONAL_FIELDS = ("issue_date", "currency", "supplier", "payment_account")
+SPARSE_SHARE = 0.4  # files that may leave optional fields out
+ENVELOPE_SHARE = 0.2  # files wrapped in a transport envelope
 
 FAILURE_BASE = 0.02
 FAILURE_PER_MISSING_OPTIONAL = 0.04
@@ -107,8 +109,8 @@ def _normal_amount(rng: random.Random) -> float:
 def _make_invoice(rng: random.Random) -> tuple[str, str, int]:
     """Returns (pretty-printed XML, case, failed) for one random invoice."""
     case = rng.choices(list(CASE_WEIGHTS), weights=list(CASE_WEIGHTS.values()))[0]
-    sparse = rng.random() < 0.4
-    wrapped = rng.random() < 0.2
+    sparse = rng.random() < SPARSE_SHARE
+    wrapped = rng.random() < ENVELOPE_SHARE
     keep = {name: not (sparse and rng.random() < 0.5) for name in OPTIONAL_FIELDS}
     currency = rng.choice(CURRENCIES)
 

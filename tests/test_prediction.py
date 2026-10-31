@@ -99,3 +99,33 @@ def test_valid_risk_rises_with_missing_optional_fields(synthetic_batch):
     ]
     assert scores[0] < 5
     assert scores[0] < scores[2] < scores[4] < 50
+
+
+def test_explanation_adds_up_to_the_score(synthetic_batch):
+    predictor = RiskPredictor()
+    predictor.fit(synthetic_batch["df"])
+    for row in (make_row(), make_row(missing_optional_fields=3), make_row(amount_negative=1)):
+        score = predictor.predict_risk(row)["risk_score"]
+        explanation = predictor.explain(row)
+        total = explanation["base"] + sum(d["points"] for d in explanation["contributions"])
+        assert abs(total - score) < 0.1
+        assert {d["feature"] for d in explanation["contributions"]} == set(
+            RiskPredictor.FEATURE_COLUMNS
+        )
+
+
+def test_explanation_credits_the_broken_rule(synthetic_batch):
+    predictor = RiskPredictor()
+    predictor.fit(synthetic_batch["df"])
+    top = predictor.explain(make_row(amount_not_numeric=1))["contributions"][0]
+    assert top["feature"] == "amount_not_numeric"
+    assert top["value"] == 1 and top["points"] > 30
+
+    # A clean file is pulled below the base rate, mostly by the rules it passes.
+    explanation = predictor.explain(make_row())
+    assert explanation["contributions"][0]["points"] < 0
+
+
+def test_explanation_needs_a_trained_model():
+    with pytest.raises(RuntimeError, match="trained before explaining"):
+        RiskPredictor().explain(make_row())

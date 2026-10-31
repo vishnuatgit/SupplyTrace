@@ -123,6 +123,10 @@ class PipelineOrchestrator:
                 "errors": row["errors"] if pd.notna(row["errors"]) else "",
                 "risk_score": row["risk_score"],
                 "risk_flag": row["risk_flag"],
+                "origin": "pipeline",
+                "xml_size": int(row["xml_size"]),
+                "nesting_depth": int(row["nesting_depth"]),
+                "missing_optional_fields": int(row["missing_optional_fields"]),
             }
             for _, row in df.iterrows()
         ]

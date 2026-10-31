@@ -13,7 +13,16 @@ MAX_DEPTH = 100
 
 
 class XMLLoadError(ValueError):
-    """Raised when a document cannot be loaded. The message is safe to show to users."""
+    """
+    Raised when a document cannot be loaded. The message is safe to show to users.
+    For malformed XML, position is (line, column), both 1-based, and reason is the
+    parser's short description (e.g. "mismatched tag"); otherwise both are None.
+    """
+
+    def __init__(self, message: str, position: tuple[int, int] | None = None, reason=None):
+        super().__init__(message)
+        self.position = position
+        self.reason = reason
 
 
 class XMLLoader:
@@ -50,12 +59,19 @@ class XMLLoader:
         expansion and external references) are refused.
         Raises XMLLoadError if the document cannot be used.
         """
+        if not content.strip():
+            # Clearer than the parser's "no element found: line 1, column 0".
+            raise XMLLoadError("The file is empty")
         try:
             root = safe_fromstring(content, forbid_dtd=True)
         except DefusedXmlException as e:
             raise XMLLoadError("DTDs and entity declarations are not allowed") from e
         except ET.ParseError as e:
-            raise XMLLoadError("Invalid or malformed XML file") from e
+            line, column = e.position
+            reason = str(e).split(":", 1)[0]
+            raise XMLLoadError(
+                "Invalid or malformed XML file", position=(line, column + 1), reason=reason
+            ) from e
         return XMLLoader._flatten_tree(root)
 
     @staticmethod

@@ -115,6 +115,13 @@ def test_entity_expansion_is_refused():
         XMLLoader.parse_bytes(bomb)
 
 
+@pytest.mark.parametrize("content", [b"", b"  \r\n\t"])
+def test_empty_document_is_refused_plainly(content):
+    with pytest.raises(XMLLoadError, match="^The file is empty$") as info:
+        XMLLoader.parse_bytes(content)
+    assert info.value.position is None
+
+
 def test_too_deep_nesting_is_refused():
     depth = MAX_DEPTH + 1
     xml = ("<a>" * depth + "x" + "</a>" * depth).encode()

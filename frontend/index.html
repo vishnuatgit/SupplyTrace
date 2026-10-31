@@ -1,308 +1,531 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SupplyTrace | Supplier XML Invoice Validation Demo</title>
-    <meta name="description" content="SupplyTrace validates supplier XML invoices with deterministic rules (VALID, INVALID or REQUIRES_REVIEW) and adds an experimental risk score from a Random Forest trained on synthetic data. A portfolio project by Vishnu Jayanth.">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SupplyTrace | Supplier XML invoice validation</title>
+    <meta name="description" content="SupplyTrace checks supplier XML invoices with deterministic rules (VALID, INVALID or REQUIRES_REVIEW), marks the failing lines, and adds an experimental risk score from a Random Forest trained on synthetic data. A portfolio project by Vishnu Jayanth.">
     <meta name="theme-color" content="#06090e">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="SupplyTrace">
-    <meta property="og:title" content="SupplyTrace: supplier XML invoice validation">
-    <meta property="og:description" content="Upload or pick a sample XML invoice and see it flattened, validated (VALID / INVALID / REQUIRES_REVIEW) and scored by an experimental Random Forest. Built with FastAPI and scikit-learn by Vishnu Jayanth.">
+    <meta property="og:title" content="SupplyTrace: supplier XML invoice validation and risk scoring">
+    <meta property="og:description" content="Pick a sample XML invoice and watch it parsed, checked rule by rule with the failing lines marked, and scored by an experimental Random Forest. Built with FastAPI and scikit-learn by Vishnu Jayanth.">
     <meta name="twitter:card" content="summary">
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=3.0">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="js/theme.js"></script>
+    <script type="module" src="js/main.js"></script>
 </head>
 <body>
-    <div class="background-glows">
+    <svg class="icon-sprite" aria-hidden="true" focusable="false">
+        <symbol id="i-layers" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></symbol>
+        <symbol id="i-server" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></symbol>
+        <symbol id="i-octagon" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+        <symbol id="i-triangle" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+        <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+        <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+        <symbol id="i-code" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></symbol>
+        <symbol id="i-check-square" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+        <symbol id="i-activity" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+        <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+        <symbol id="i-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
+        <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+        <symbol id="i-minus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></symbol>
+        <symbol id="i-slash" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></symbol>
+        <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+        <symbol id="i-chevron-down" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+        <symbol id="i-chevron-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+        <symbol id="i-sort" viewBox="0 0 24 24"><polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/></symbol>
+        <symbol id="i-arrow-right" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+        <symbol id="i-jump" viewBox="0 0 24 24"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
+        <symbol id="i-rotate" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></symbol>
+        <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+        <symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+        <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+        <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></symbol>
+        <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-bar-chart" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+        <symbol id="i-list" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+        <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></symbol>
+        <symbol id="i-github" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+    </svg>
+
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <div class="background-glows" aria-hidden="true">
         <div class="glow glow-1"></div>
         <div class="glow glow-2"></div>
     </div>
 
     <div class="dashboard-wrapper">
         <header class="dashboard-header">
-            <div class="header-logo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="logo-icon" aria-hidden="true">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                </svg>
-                <div class="logo-text">
-                    <h1>SupplyTrace</h1>
+            <a class="header-logo" href="#/check" aria-label="SupplyTrace, home">
+                <svg class="icon logo-icon" aria-hidden="true"><use href="#i-layers"/></svg>
+                <span class="logo-text">
+                    <span class="brand-name">SupplyTrace</span>
                     <span class="system-status">Supplier XML invoice validation &middot; demo</span>
-                </div>
-            </div>
-            <nav class="header-links" aria-label="Project links">
-                <a href="https://github.com/vishnuatgit/SupplyTrace" target="_blank" rel="noopener">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-                    Source on GitHub
-                </a>
-                <a href="https://vishnuatgit.github.io" target="_blank" rel="noopener" class="author-link">Built by Vishnu Jayanth</a>
+                </span>
+            </a>
+            <nav class="main-nav" aria-label="Main">
+                <a href="#/check" data-route="check"><svg class="icon" aria-hidden="true"><use href="#i-check-square"/></svg>Check</a>
+                <a href="#/batch" data-route="batch"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>Batch</a>
+                <a href="#/audit" data-route="audit"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg>Audit log</a>
+                <a href="#/rules" data-route="rules"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>Rules &amp; model</a>
+                <a href="#/about" data-route="about"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>About</a>
             </nav>
+            <div class="header-links">
+                <button type="button" class="icon-btn theme-toggle" id="theme-toggle" aria-label="Switch to light theme" title="Switch theme">
+                    <svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+                    <svg class="icon icon-moon" aria-hidden="true"><use href="#i-moon"/></svg>
+                </button>
+                <a href="https://github.com/vishnuatgit/SupplyTrace" target="_blank" rel="noopener" class="header-link">
+                    <svg class="icon icon-brand" aria-hidden="true"><use href="#i-github"/></svg>
+                    <span class="header-link-text">Source on GitHub</span>
+                </a>
+                <a href="https://vishnuatgit.github.io" target="_blank" rel="noopener" class="header-link author-link">Built by Vishnu Jayanth</a>
+            </div>
         </header>
 
-        <section class="intro" aria-label="About this demo">
-            <p class="intro-lead">
-                Check a supplier XML invoice in one click. SupplyTrace flattens the nested XML, finds the transaction ID and amount wherever they sit, and applies deterministic rules that label the file
-                <span class="inline-status status-VALID">VALID</span>,
-                <span class="inline-status status-INVALID">INVALID</span> or
-                <span class="inline-status status-REQUIRES_REVIEW">REQUIRES_REVIEW</span>.
-                A small Random Forest adds an experimental risk score, and every analysis is written to a JSON Lines audit log.
-            </p>
-            <p class="intro-note">
-                <span class="pill">Synthetic data</span>
-                The dashboard starts from a batch of generated invoices, and the risk model is trained on them. Nothing here is real supplier data, so please don't upload real invoices.
-            </p>
-        </section>
+        <main id="main" tabindex="-1">
 
-        <!-- Main Dashboard Workspace Layout -->
-        <main class="dashboard-grid">
-
-            <!-- KPI Metrics Ribbon -->
-            <div class="kpi-block">
-                <section class="metrics-ribbon" id="dashboard-stats" aria-label="Totals">
-                    <div class="metric-card glass-panel" data-tooltip="Invoices analysed: the synthetic batch plus your analyses in this session.">
-                        <div class="metric-info">
-                            <h3>Analysed</h3>
-                            <p class="metric-value" id="stat-total">0</p>
-                        </div>
-                        <div class="metric-icon-bg total-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-                        </div>
-                    </div>
-                    <div class="metric-card glass-panel" data-tooltip="Share of analysed invoices that the validation rules marked INVALID.">
-                        <div class="metric-info">
-                            <h3>Invalid Rate</h3>
-                            <p class="metric-value error-text" id="stat-failure">0%</p>
-                        </div>
-                        <div class="metric-icon-bg failure-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                        </div>
-                    </div>
-                    <div class="metric-card glass-panel" data-tooltip="Average risk score from the experimental model, which is trained on synthetic data.">
-                        <div class="metric-info">
-                            <h3>Avg. Risk Score</h3>
-                            <p class="metric-value warning-text" id="stat-risk">0%</p>
-                        </div>
-                        <div class="metric-icon-bg risk-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                        </div>
-                    </div>
-                    <div class="metric-card glass-panel" data-tooltip="Invoices the experimental model scored above 50% risk.">
-                        <div class="metric-info">
-                            <h3>High Risk Flags</h3>
-                            <p class="metric-value danger-text" id="stat-flags">0</p>
-                        </div>
-                        <div class="metric-icon-bg flags-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="11"></line></svg>
-                        </div>
-                    </div>
-                </section>
-                <p class="stats-caption" id="stats-caption">Loading totals&hellip;</p>
-            </div>
-
-            <!-- Left Column: Ingestion & Live Editor/Sandbox -->
-            <div class="grid-column left-column">
-                <section class="glass-panel inspector-panel" aria-labelledby="inspector-title">
-                    <div class="panel-header">
-                        <h2 id="inspector-title">Payload Inspector</h2>
-                        <div class="tab-selectors" role="tablist" aria-label="Input method">
-                            <button id="tab-upload-btn" class="tab-btn active" role="tab" aria-selected="true" aria-controls="pane-upload">
-                                Upload File
-                            </button>
-                            <button id="tab-sandbox-btn" class="tab-btn" role="tab" aria-selected="false" aria-controls="pane-sandbox">
-                                Sandbox Editor
-                            </button>
-                        </div>
+            <!-- ============ Check: the dashboard ============ -->
+            <section class="view" id="view-check" data-view="check" aria-labelledby="check-title">
+                <div class="intro-row">
+                    <div class="intro">
+                        <h1 id="check-title" class="intro-title view-title" tabindex="-1">Checks supplier XML invoices with deterministic rules, marks the failing lines, and adds an experimental ML risk score.</h1>
+                        <p class="intro-lead">
+                            Pick a sample or drop in your own file. Five rules label it
+                            <span class="inline-status status-VALID">VALID</span>,
+                            <span class="inline-status status-INVALID">INVALID</span> or
+                            <span class="inline-status status-REQUIRES_REVIEW">REQUIRES_REVIEW</span><span class="lead-detail"> once the nested XML is parsed safely and flattened, and the transaction ID and amount are found wherever they sit</span>.
+                            A small Random Forest adds a risk score, and every check is written to a JSON Lines audit log.
+                        </p>
+                        <p class="intro-note">
+                            <span class="pill">Synthetic data</span>
+                            The demo starts from 400 generated invoices, and the risk model is trained on them. Please don't upload real invoices.
+                        </p>
                     </div>
 
-                    <!-- One-click sample invoices -->
-                    <div class="sample-bar">
-                        <span class="sample-label">Try a sample</span>
-                        <div class="sample-chips" id="sample-chips">
-                            <span class="sample-placeholder">Loading samples&hellip;</span>
+                    <section class="glass-panel pipeline" id="pipeline" aria-labelledby="pipeline-title">
+                        <div class="pipeline-head">
+                            <h2 id="pipeline-title">How it works</h2>
+                            <p class="pipeline-status" id="pipeline-status">Pick a sample to watch it run.</p>
                         </div>
-                    </div>
+                        <ol class="pipeline-steps">
+                            <li class="step" data-step="parse">
+                                <span class="step-dot" aria-hidden="true"><svg class="icon"><use href="#i-code"/></svg></span>
+                                <span class="step-body">
+                                    <span class="step-name">Parse</span>
+                                    <span class="step-detail">defusedxml, 1&nbsp;MB cap, 100-level depth limit; flattens the nested XML and records each element's line</span>
+                                </span>
+                                <span class="step-time" data-time></span>
+                            </li>
+                            <li class="step" data-step="validate">
+                                <span class="step-dot" aria-hidden="true"><svg class="icon"><use href="#i-check-square"/></svg></span>
+                                <span class="step-body">
+                                    <span class="step-name">Validate</span>
+                                    <span class="step-detail">Five deterministic rules decide the status and point at lines</span>
+                                </span>
+                                <span class="step-time" data-time></span>
+                            </li>
+                            <li class="step" data-step="score">
+                                <span class="step-dot" aria-hidden="true"><svg class="icon"><use href="#i-activity"/></svg></span>
+                                <span class="step-body">
+                                    <span class="step-name">Score <span class="experimental-tag">Experimental</span></span>
+                                    <span class="step-detail">Random Forest risk score from eight validation signals</span>
+                                </span>
+                                <span class="step-time" data-time></span>
+                            </li>
+                            <li class="step" data-step="log">
+                                <span class="step-dot" aria-hidden="true"><svg class="icon"><use href="#i-database"/></svg></span>
+                                <span class="step-body">
+                                    <span class="step-name">Log</span>
+                                    <span class="step-detail">One JSON line per file in the rotating audit log</span>
+                                </span>
+                                <span class="step-time" data-time></span>
+                            </li>
+                        </ol>
+                    </section>
+                </div>
 
-                    <!-- Inline error message -->
-                    <div id="inspector-error" class="inline-error hidden" role="alert"></div>
-
-                    <!-- Upload File Tab Pane -->
-                    <div id="pane-upload" class="tab-pane" role="tabpanel" aria-labelledby="tab-upload-btn">
-                        <div class="upload-zone" id="drop-zone">
-                            <div class="upload-icon">
-                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="17 8 12 3 7 8"></polyline>
-                                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                                </svg>
-                            </div>
-                            <h3>Drag &amp; Drop an XML Invoice</h3>
-                            <p>Validated and scored on the server. XML only, up to 1&nbsp;MB.</p>
-                            <input type="file" id="file-input" accept=".xml,text/xml,application/xml" hidden>
-                            <button id="browse-btn" class="btn-primary-outline">Select File</button>
-                        </div>
-                    </div>
-
-                    <!-- Sandbox Editor Tab Pane -->
-                    <div id="pane-sandbox" class="tab-pane hidden" role="tabpanel" aria-labelledby="tab-sandbox-btn">
-                        <div class="sandbox-container">
-                            <div class="sandbox-header">
-                                <span class="editor-filename" id="editor-filename">sandbox_invoice.xml</span>
-                                <button id="load-template-btn" class="btn-text-only">Load Valid Template</button>
-                            </div>
-                            <textarea id="xml-editor" aria-label="XML invoice" wrap="off" placeholder="Paste or edit raw UBL XML content here..." spellcheck="false"></textarea>
-                            <div class="sandbox-actions">
-                                <button id="analyze-sandbox-btn" class="btn-primary">Analyze Payload</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Loading / Evaluating State -->
-                    <div id="loading" class="hidden">
-                        <div class="spinner-container">
-                            <div class="spinner"></div>
-                            <p>Validating and scoring&hellip;</p>
-                        </div>
-                    </div>
-
-                    <!-- Analysis Output Panel -->
-                    <div id="results" class="results-view hidden">
-                        <div class="submitted-xml">
-                            <div class="submitted-header">
-                                <span class="sub-label">Submitted XML</span>
-                                <span class="editor-filename" id="res-xml-meta"></span>
-                                <button id="edit-xml-btn" class="btn-text-only">Edit in sandbox</button>
-                            </div>
-                            <pre id="res-xml" class="xml-preview" tabindex="0" aria-label="Submitted XML"></pre>
-                        </div>
-
-                        <div class="results-container">
-                            <div class="result-card-header">
-                                <h3 id="res-filename">filename.xml</h3>
-                                <span id="res-status" class="status-badge">VALID</span>
-                            </div>
-                            <p id="res-summary" class="result-summary"></p>
-
-                            <div id="res-errors-container" class="errors-box hidden">
-                                <span class="sub-label error-header" id="res-errors-title">Validation Failures</span>
-                                <ul id="res-errors" class="reason-list"></ul>
-                            </div>
-
-                            <div class="risk-block">
-                                <div class="risk-head">
-                                    <span class="sub-label">Risk Score</span>
-                                    <span class="experimental-tag">Experimental</span>
+                <div class="dashboard-grid">
+                    <!-- KPI ribbon: computed from the audit log -->
+                    <div class="kpi-block">
+                        <section class="metrics-ribbon" aria-label="Totals from the audit log" aria-busy="true" id="kpis">
+                            <div class="metric-card glass-panel" tabindex="0" aria-describedby="tip-total">
+                                <div class="metric-info">
+                                    <h3>Analysed</h3>
+                                    <p class="metric-value" id="stat-total"><span class="skeleton skeleton-num"></span></p>
+                                    <p class="metric-sub" id="stat-total-sub">&nbsp;</p>
                                 </div>
-                                <div class="risk-meter-wrapper">
-                                    <span id="res-risk-score" class="sub-value risk-val">0%</span>
-                                    <span id="res-risk-flag" class="flag-badge">LOW</span>
-                                </div>
-                                <div class="risk-bar"><div id="res-risk-bar" class="risk-bar-fill"></div></div>
-                                <p class="risk-note">Estimated by a Random Forest trained on synthetic invoices. The validation status above is the authoritative result.</p>
+                                <div class="metric-icon-bg total-icon"><svg class="icon" aria-hidden="true"><use href="#i-server"/></svg></div>
+                                <span class="tooltip" role="tooltip" id="tip-total">Files in the audit log: the synthetic startup batch plus every check since, by anyone using this demo.</span>
                             </div>
+                            <div class="metric-card glass-panel" tabindex="0" aria-describedby="tip-invalid">
+                                <div class="metric-info">
+                                    <h3>Invalid rate</h3>
+                                    <p class="metric-value danger-text" id="stat-invalid"><span class="skeleton skeleton-num"></span></p>
+                                    <p class="metric-sub" id="stat-invalid-sub">&nbsp;</p>
+                                </div>
+                                <div class="metric-icon-bg failure-icon"><svg class="icon" aria-hidden="true"><use href="#i-octagon"/></svg></div>
+                                <span class="tooltip" role="tooltip" id="tip-invalid">Share of logged files that the validation rules marked INVALID.</span>
+                            </div>
+                            <div class="metric-card glass-panel" tabindex="0" aria-describedby="tip-risk">
+                                <div class="metric-info">
+                                    <h3>Avg. risk score</h3>
+                                    <p class="metric-value warning-text" id="stat-risk"><span class="skeleton skeleton-num"></span></p>
+                                    <p class="metric-sub" id="stat-risk-sub">&nbsp;</p>
+                                </div>
+                                <div class="metric-icon-bg risk-icon"><svg class="icon" aria-hidden="true"><use href="#i-triangle"/></svg></div>
+                                <span class="tooltip" role="tooltip" id="tip-risk">Mean risk score of the scored files. Experimental: the model is trained on synthetic invoices.</span>
+                            </div>
+                            <div class="metric-card glass-panel" tabindex="0" aria-describedby="tip-flags">
+                                <div class="metric-info">
+                                    <h3>High-risk flags</h3>
+                                    <p class="metric-value danger-text" id="stat-flags"><span class="skeleton skeleton-num"></span></p>
+                                    <p class="metric-sub" id="stat-flags-sub">&nbsp;</p>
+                                </div>
+                                <div class="metric-icon-bg flags-icon"><svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg></div>
+                                <span class="tooltip" role="tooltip" id="tip-flags">Files the experimental model scored above 50% risk.</span>
+                            </div>
+                        </section>
+                        <p class="stats-caption" id="stats-caption">Loading totals from the audit log&hellip;</p>
+                    </div>
 
-                            <div class="metrics-subgrid">
-                                <div class="sub-metric">
-                                    <span class="sub-label">Missing Required</span>
-                                    <span id="res-missing" class="sub-value text-highlight">0</span>
-                                </div>
-                                <div class="sub-metric">
-                                    <span class="sub-label">Missing Optional</span>
-                                    <span id="res-optional" class="sub-value">0</span>
-                                </div>
-                                <div class="sub-metric">
-                                    <span class="sub-label">Nesting Depth</span>
-                                    <span id="res-depth" class="sub-value">0</span>
-                                </div>
-                                <div class="sub-metric">
-                                    <span class="sub-label">File Size</span>
-                                    <span id="res-size" class="sub-value">0 B</span>
-                                </div>
-                                <div class="sub-metric">
-                                    <span class="sub-label">Server Time</span>
-                                    <span id="res-time" class="sub-value">0 ms</span>
+                    <!-- Left: Payload Inspector -->
+                    <div class="grid-column left-column">
+                        <section class="glass-panel inspector-panel" id="inspector" aria-labelledby="inspector-title">
+                            <div class="panel-header">
+                                <h2 id="inspector-title">Payload Inspector</h2>
+                                <div class="tab-selectors" role="tablist" aria-label="Your own file">
+                                    <button type="button" class="tab-btn" role="tab" id="tab-upload" aria-controls="pane-upload" aria-selected="true">
+                                        <svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg>Upload file
+                                    </button>
+                                    <button type="button" class="tab-btn" role="tab" id="tab-sandbox" aria-controls="pane-sandbox" aria-selected="false" tabindex="-1">
+                                        <svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Sandbox editor
+                                    </button>
                                 </div>
                             </div>
 
-                            <div class="result-actions">
-                                <button id="reset-btn" class="btn-secondary">Analyze Another</button>
+                            <div class="sample-bar">
+                                <span class="sample-label" id="samples-label">Try a sample</span>
+                                <div class="sample-chips" id="sample-chips" role="group" aria-labelledby="samples-label" aria-busy="true">
+                                    <span class="skeleton skeleton-chip"></span><span class="skeleton skeleton-chip"></span><span class="skeleton skeleton-chip"></span><span class="skeleton skeleton-chip"></span>
+                                </div>
+                                <p class="sample-hint" id="sample-hint">Each sample is a synthetic UBL-style invoice. The dot shows the status it is built to get.</p>
                             </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
 
-            <!-- Right Column: Visual Charts & Transaction Log -->
-            <div class="grid-column right-column">
+                            <div id="inspector-error" class="inline-error" role="alert" hidden></div>
 
-                <!-- SVG Graphs/Analytics Card -->
-                <section class="glass-panel analytics-panel">
-                    <h2>Validation &amp; Risk Overview</h2>
-                    <div class="charts-row">
-                        <!-- Chart 1: Circular Health Dial -->
-                        <div class="chart-wrapper">
-                            <span class="chart-title">Valid Share</span>
-                            <div class="radial-gauge">
-                                <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
-                                    <circle class="gauge-bg" cx="60" cy="60" r="50"></circle>
-                                    <circle id="gauge-fill" class="gauge-fill" cx="60" cy="60" r="50" transform="rotate(-90 60 60)"></circle>
-                                </svg>
-                                <div class="gauge-value" id="gauge-val">0%</div>
+                            <div id="pane-upload" class="tab-pane" role="tabpanel" aria-labelledby="tab-upload">
+                                <div class="upload-zone" id="drop-zone">
+                                    <div class="upload-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></div>
+                                    <h3>Drag &amp; drop an XML invoice</h3>
+                                    <p>Checked on the server, not stored. XML only, up to 1&nbsp;MB. Drop several files to check them as a batch.</p>
+                                    <input type="file" id="file-input" accept=".xml,text/xml,application/xml" hidden>
+                                    <button type="button" id="browse-btn" class="btn btn-outline">Select file</button>
+                                </div>
                             </div>
-                            <span class="chart-caption">VALID invoices out of all analysed</span>
-                        </div>
 
-                        <!-- Chart 2: Risk Profile Spread -->
-                        <div class="chart-wrapper">
-                            <span class="chart-title">Risk Flags (Experimental)</span>
-                            <div class="distribution-bars">
-                                <div class="dist-bar-item">
-                                    <span class="dist-label">Low Risk</span>
-                                    <div class="bar-outer">
-                                        <div id="dist-bar-low" class="bar-inner low-bg" style="width: 0%"></div>
+                            <div id="pane-sandbox" class="tab-pane" role="tabpanel" aria-labelledby="tab-sandbox" hidden>
+                                <div class="sandbox-container">
+                                    <div class="sandbox-header">
+                                        <span class="editor-filename" id="editor-filename">sandbox_invoice.xml</span>
+                                        <button type="button" id="load-template-btn" class="btn-text">Load valid template</button>
                                     </div>
-                                    <span class="dist-count" id="dist-val-low">0</span>
-                                </div>
-                                <div class="dist-bar-item">
-                                    <span class="dist-label">High Risk</span>
-                                    <div class="bar-outer">
-                                        <div id="dist-bar-high" class="bar-inner high-bg" style="width: 0%"></div>
+                                    <p class="inline-error editor-note" id="editor-note" role="status" hidden></p>
+                                    <div class="editor" id="editor">
+                                        <div class="editor-band" id="editor-band" aria-hidden="true" hidden></div>
+                                        <div class="editor-gutter" id="editor-gutter" aria-hidden="true"><span>1</span></div>
+                                        <label class="visually-hidden" for="xml-editor">XML to check</label>
+                                        <textarea id="xml-editor" wrap="off" spellcheck="false" autocomplete="off" placeholder="Paste or edit XML here, for example:&#10;&lt;Invoice&gt;&#10;  &lt;TransactionID&gt;TXN-1&lt;/TransactionID&gt;&#10;  &lt;PayableAmount&gt;120.00&lt;/PayableAmount&gt;&#10;&lt;/Invoice&gt;"></textarea>
                                     </div>
-                                    <span class="dist-count" id="dist-val-high">0</span>
+                                    <div class="sandbox-actions">
+                                        <span class="kbd-hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to check</span>
+                                        <button type="button" id="analyze-sandbox-btn" class="btn btn-primary">
+                                            <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg>Check XML
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+
+                            <div id="inspector-loading" class="result-skeleton" hidden aria-hidden="true">
+                                <div class="skeleton skeleton-banner"></div>
+                                <div class="skeleton skeleton-line"></div>
+                                <div class="skeleton skeleton-line short"></div>
+                                <div class="skeleton skeleton-block"></div>
+                            </div>
+
+                            <div id="result" class="result"></div>
+                        </section>
+                    </div>
+
+                    <!-- Right: charts and the recent analyses -->
+                    <div class="grid-column right-column">
+                        <section class="glass-panel analytics-panel" aria-labelledby="overview-title">
+                            <div class="panel-header">
+                                <h2 id="overview-title">Validation &amp; Risk Overview</h2>
+                                <span class="live-tag" id="overview-updated"><span class="live-dot" aria-hidden="true"></span><span id="overview-updated-text">Audit log</span></span>
+                            </div>
+                            <div class="charts-row">
+                                <figure class="chart-wrapper">
+                                    <figcaption class="chart-title">Valid share</figcaption>
+                                    <div class="chart-slot" id="chart-share"><div class="skeleton skeleton-ring"></div></div>
+                                </figure>
+                                <figure class="chart-wrapper">
+                                    <figcaption class="chart-title">Risk distribution <span class="experimental-tag">Experimental</span></figcaption>
+                                    <div class="chart-slot" id="chart-risk"><div class="skeleton skeleton-chart"></div></div>
+                                </figure>
+                            </div>
+                            <figure class="chart-wrapper chart-wide">
+                                <figcaption class="chart-title">Most common reasons</figcaption>
+                                <div class="chart-slot" id="chart-reasons"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-line short"></div></div>
+                            </figure>
+                        </section>
+
+                        <section class="glass-panel history-panel" aria-labelledby="history-title">
+                            <div class="panel-header">
+                                <h2 id="history-title">Recent Analyses</h2>
+                                <a class="feed-indicator" href="#/audit">Full audit log<svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+                            </div>
+                            <div class="accordion-feed" id="history-feed" aria-busy="true">
+                                <div class="skeleton skeleton-row"></div>
+                                <div class="skeleton skeleton-row"></div>
+                                <div class="skeleton skeleton-row"></div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ Batch check ============ -->
+            <section class="view" id="view-batch" data-view="batch" aria-labelledby="batch-title" hidden>
+                <div class="view-head">
+                    <h1 id="batch-title" class="view-title" tabindex="-1">Batch check</h1>
+                    <p class="view-lede">Check up to 20 XML files at once, 1&nbsp;MB each. Every file goes through the same pipeline as a single check, results stream in as each file is done, and every accepted file is written to the audit log.</p>
+                </div>
+
+                <section class="glass-panel batch-input" aria-label="Choose files">
+                    <div class="batch-start">
+                        <button type="button" class="btn btn-primary btn-lg" id="batch-samples">
+                            <svg class="icon" aria-hidden="true"><use href="#i-play"/></svg><span id="batch-samples-label">Check the sample invoices</span>
+                        </button>
+                        <p class="hint" id="batch-samples-hint">Every sample is a synthetic invoice built to get a known status.</p>
+                    </div>
+                    <div class="upload-zone upload-zone-inline" id="batch-dropzone">
+                        <div class="upload-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></div>
+                        <div class="upload-copy">
+                            <h3>Drop up to 20 XML files</h3>
+                            <p>Files that are not .xml or are over 1&nbsp;MB are listed as rejected, not sent.</p>
+                        </div>
+                        <input type="file" id="batch-input" accept=".xml,text/xml,application/xml" multiple hidden>
+                        <button type="button" class="btn btn-outline" id="batch-choose">Choose files</button>
+                    </div>
+                </section>
+
+                <section class="glass-panel batch-progress" id="batch-progress" aria-live="polite" hidden>
+                    <div class="progress-head">
+                        <span class="spinner" aria-hidden="true"></span>
+                        <p id="batch-progress-text">Uploading&hellip;</p>
+                        <span class="progress-count mono" id="batch-progress-count"></span>
+                    </div>
+                    <div class="progress-track" role="progressbar" aria-labelledby="batch-progress-text" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="batch-progressbar">
+                        <div class="progress-fill" id="batch-progress-fill"></div>
+                    </div>
+                </section>
+
+                <div id="batch-output">
+                    <div class="empty-state glass-panel">
+                        <div class="empty-icon"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg></div>
+                        <p class="empty-title">No batch checked yet</p>
+                        <p>Run the sample invoices or choose your own files. You get counts by status, a risk chart, a sortable table you can drill into, and CSV or JSON downloads.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ Audit log ============ -->
+            <section class="view" id="view-audit" data-view="audit" aria-labelledby="audit-title" hidden>
+                <div class="view-head">
+                    <h1 id="audit-title" class="view-title" tabindex="-1">Audit log</h1>
+                    <p class="view-lede">Every check is appended to a JSON Lines file on the server, one line per file; it rotates at about 1&nbsp;MB. The log is shared by everyone using this demo, and on the hosted demo it starts again from the synthetic batch after a restart.</p>
+                </div>
+
+                <section class="glass-panel audit-panel" aria-label="Audit log entries">
+                    <div class="audit-toolbar">
+                        <div class="segmented" id="audit-filter" role="radiogroup" aria-label="Status">
+                            <label><input type="radio" name="audit-status" value="" checked><span>All</span><span class="count" data-count="ALL"></span></label>
+                            <label><input type="radio" name="audit-status" value="VALID"><span>Valid</span><span class="count" data-count="VALID"></span></label>
+                            <label><input type="radio" name="audit-status" value="INVALID"><span>Invalid</span><span class="count" data-count="INVALID"></span></label>
+                            <label><input type="radio" name="audit-status" value="REQUIRES_REVIEW"><span>Needs review</span><span class="count" data-count="REQUIRES_REVIEW"></span></label>
+                        </div>
+                        <div class="audit-tools">
+                            <label class="select-wrap">
+                                <span class="visually-hidden">Source</span>
+                                <select id="audit-origin">
+                                    <option value="">All sources</option>
+                                    <option value="web">Single checks</option>
+                                    <option value="web-batch">Batch checks</option>
+                                    <option value="pipeline">Startup batch</option>
+                                </select>
+                                <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+                            </label>
+                            <label class="search">
+                                <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+                                <span class="visually-hidden">Search file names and transaction IDs</span>
+                                <input type="search" id="audit-search" placeholder="Search file or ID" maxlength="200" autocomplete="off">
+                            </label>
+                            <button type="button" class="btn btn-secondary" id="audit-refresh"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>Refresh</button>
+                            <button type="button" class="btn btn-secondary" id="audit-export" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Export</button>
                         </div>
                     </div>
-                </section>
-
-                <!-- Transaction Log -->
-                <section class="glass-panel history-panel">
-                    <div class="panel-header">
-                        <h2>Recent Analyses</h2>
-                        <span class="feed-indicator">Your session first, then the latest batch rows</span>
-                    </div>
-                    <div class="accordion-feed" id="history-feed">
-                        <!-- Filled dynamically with interactive cards -->
-                        <div class="feed-empty-state">Loading analyses&hellip;</div>
+                    <div class="split-bar-wrap" id="audit-split"></div>
+                    <div id="audit-output">
+                        <div class="skeleton skeleton-row"></div>
+                        <div class="skeleton skeleton-row"></div>
+                        <div class="skeleton skeleton-row"></div>
                     </div>
                 </section>
-            </div>
+            </section>
 
+            <!-- ============ Rules and model ============ -->
+            <section class="view" id="view-rules" data-view="rules" aria-labelledby="rules-title" hidden>
+                <div class="view-head">
+                    <h1 id="rules-title" class="view-title" tabindex="-1">Rules and model</h1>
+                    <p class="view-lede">The rules decide the status. The risk score is advisory: it is shown next to the status and never changes it. Everything on this page comes from the running server, so it cannot drift from the code.</p>
+                </div>
+                <div class="reference" id="rules-output">
+                    <div class="glass-panel"><div class="skeleton skeleton-line"></div><div class="skeleton skeleton-block"></div></div>
+                </div>
+            </section>
+
+            <!-- ============ About ============ -->
+            <section class="view" id="view-about" data-view="about" aria-labelledby="about-title" hidden>
+                <div class="view-head">
+                    <h1 id="about-title" class="view-title" tabindex="-1">About SupplyTrace</h1>
+                    <p class="view-lede">A portfolio project by Vishnu Jayanth: a small, honest version of the checks an accounts-payable system runs on supplier invoice files, built to be read end to end.</p>
+                </div>
+
+                <div class="about-grid">
+                    <section class="glass-panel prose">
+                        <h2>The problem</h2>
+                        <p>Companies exchange invoices as structured XML files: the supplier's billing system sends a file, and the buyer's accounts-payable system books it. A file that is missing its transaction ID, or carries an amount like <code>12,50.00</code>, does not always fail on arrival. It can move through import jobs and queues and fail in a system several steps away, where the error no longer points to the file. SupplyTrace moves the check to the front door: it reads each file once, applies explicit rules, and shows the line that is wrong.</p>
+                    </section>
+
+                    <section class="glass-panel prose">
+                        <h2>Architecture</h2>
+                        <p>One request, left to right. The same parser, rules and features also run in the batch pipeline that builds the demo data at startup.</p>
+                        <ol class="arch" aria-label="Architecture, in request order">
+                            <li class="arch-node"><span class="arch-name">Browser</span><code>frontend/</code><span class="arch-note">HTML, CSS, JS modules</span></li>
+                            <li class="arch-node"><span class="arch-name">FastAPI</span><code>src/<wbr>api/</code><span class="arch-note">endpoints, upload limits</span></li>
+                            <li class="arch-node"><span class="arch-name">Parser</span><code>src/<wbr>ingestion/</code><span class="arch-note">defusedxml, flatten, line numbers</span></li>
+                            <li class="arch-node"><span class="arch-name">Rules</span><code>src/<wbr>validation/</code><span class="arch-note">decide the status</span></li>
+                            <li class="arch-node"><span class="arch-name">Features</span><code>src/<wbr>features/</code><span class="arch-note">eight risk signals</span></li>
+                            <li class="arch-node arch-advisory"><span class="arch-name">Model</span><code>src/<wbr>prediction/</code><span class="arch-note">risk score, advisory</span></li>
+                            <li class="arch-node"><span class="arch-name">Audit log</span><code>src/<wbr>utils/<wbr>audit.py</code><span class="arch-note">audit_log.jsonl</span></li>
+                        </ol>
+                        <p class="muted">Every user and system flow, with diagrams, is written up in <a href="https://github.com/vishnuatgit/SupplyTrace/blob/main/docs/process-flows.md" target="_blank" rel="noopener">docs/process-flows.md</a>.</p>
+                    </section>
+
+                    <section class="glass-panel prose">
+                        <h2>Tech stack</h2>
+                        <div class="table-scroll">
+                            <table class="data-table stack-table">
+                                <thead><tr><th scope="col">Layer</th><th scope="col">Choice</th><th scope="col">Why</th></tr></thead>
+                                <tbody>
+                                    <tr><th scope="row">API</th><td>FastAPI, Uvicorn</td><td>Typed endpoints, a streaming batch endpoint, and generated API docs at <a href="/docs">/docs</a>.</td></tr>
+                                    <tr><th scope="row">XML</th><td>defusedxml, Python's expat</td><td>Safe parsing of untrusted files; a second expat pass records line numbers.</td></tr>
+                                    <tr><th scope="row">Data</th><td>pandas, NumPy</td><td>Batch results, the model's training table and its explanations.</td></tr>
+                                    <tr><th scope="row">Model</th><td>scikit-learn Random Forest</td><td>Small, repeatable with a fixed seed, and explainable tree by tree.</td></tr>
+                                    <tr><th scope="row">Frontend</th><td>HTML, CSS, JavaScript modules</td><td>No framework, no build step; charts are hand-drawn SVG.</td></tr>
+                                    <tr><th scope="row">Quality</th><td>pytest, Ruff, GitHub Actions</td><td>Unit and integration tests and lint on every push, on Python 3.11 and 3.12.</td></tr>
+                                    <tr><th scope="row">Hosting</th><td>Render</td><td>A Blueprint (<code>render.yaml</code>) builds the demo data at deploy time.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="glass-panel prose">
+                        <h2>Design decisions</h2>
+                        <dl class="decisions">
+                            <div><dt>Rules decide, the model advises.</dt>
+                            <dd>The status comes from five deterministic rules that anyone can read and test. The risk score sits next to it but never changes it, because the model is trained on simulated outcomes.</dd></div>
+                            <div><dt>Untrusted XML is parsed defensively.</dt>
+                            <dd><code>defusedxml</code> refuses DTDs, so there is no entity expansion and no external entities. Documents nested more than 100 levels deep are rejected, and uploads over 1&nbsp;MB get a 413 before the body is read.</dd></div>
+                            <div><dt>Uploads are not stored.</dt>
+                            <dd>Files are parsed in memory. Only a one-line summary (file name, transaction ID, status, reasons, risk score, size) goes to the audit log.</dd></div>
+                            <div><dt>One pipeline for every entry point.</dt>
+                            <dd>A single check, a batch and the streamed batch call the same function, so a file gets the same answer either way. Tests compare them.</dd></div>
+                            <div><dt>Findings point at lines.</dt>
+                            <dd>ElementTree does not keep line numbers, so after the safe parse a lightweight expat pass records them. Every rule in the checklist carries the line the page highlights.</dd></div>
+                            <div><dt>The score explains itself.</dt>
+                            <dd>Each tree's path is followed and every split's change in failure rate is credited to its feature, so the base rate plus the contributions adds up to the score.</dd></div>
+                            <div><dt>Plain files over infrastructure.</dt>
+                            <dd>Batch results are a CSV and the audit log is a JSON Lines file: easy to inspect, enough for a demo, and simple to swap for a database later.</dd></div>
+                            <div><dt>Reproducible data.</dt>
+                            <dd>The synthetic invoices come from a fixed seed, so the dataset, the model and the model card come out the same on every run.</dd></div>
+                        </dl>
+                    </section>
+
+                    <section class="glass-panel prose">
+                        <h2>Limitations</h2>
+                        <ul class="plain-list">
+                            <li>The risk model is trained on synthetic invoices with simulated outcomes. It says nothing about real suppliers.</li>
+                            <li>Five rules only: no checks on line totals, tax, dates, currencies or duplicate invoices.</li>
+                            <li>Repeated elements, such as several invoice lines, collapse to the last one when flattened, and XML attributes are ignored.</li>
+                            <li>The audit log is one shared file on a temporary disk: every visitor sees the same log, and it resets when the hosted demo restarts.</li>
+                            <li>No accounts or authentication. It is a demo, not a multi-user service.</li>
+                        </ul>
+                        <h2>Source</h2>
+                        <p>The code, tests and setup notes are on <a href="https://github.com/vishnuatgit/SupplyTrace" target="_blank" rel="noopener">GitHub</a>. The API is documented at <a href="/docs">/docs</a>.</p>
+                    </section>
+                </div>
+            </section>
         </main>
 
         <footer class="site-footer">
             <p>
                 Built by <a href="https://vishnuatgit.github.io" target="_blank" rel="noopener">Vishnu Jayanth</a>
                 &middot; <a href="https://github.com/vishnuatgit/SupplyTrace" target="_blank" rel="noopener">Source on GitHub</a>
+                &middot; <a href="/docs">API docs</a>
                 &middot; MIT licence
             </p>
-            <p>Demo on synthetic data. Uploaded files are parsed in memory and not stored; the audit log keeps the filename, transaction ID, validation result and risk score.</p>
+            <p>Demo on synthetic data. Uploaded files are parsed in memory and not stored; the audit log keeps the file name, transaction ID, validation result, risk score and file size.</p>
         </footer>
     </div>
 
-    <script src="app.js?v=3.0"></script>
+    <dialog class="drawer" id="drawer" aria-labelledby="drawer-title">
+        <div class="drawer-head">
+            <div>
+                <p class="drawer-eyebrow" id="drawer-eyebrow">Batch result</p>
+                <h2 class="drawer-title mono" id="drawer-title">invoice.xml</h2>
+            </div>
+            <div class="drawer-nav">
+                <button type="button" class="icon-btn" id="drawer-prev" aria-label="Previous file"><svg class="icon flip" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+                <button type="button" class="icon-btn" id="drawer-next" aria-label="Next file"><svg class="icon" aria-hidden="true"><use href="#i-chevron-right"/></svg></button>
+                <button type="button" class="icon-btn" id="drawer-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+        </div>
+        <div class="drawer-body result" id="drawer-body"></div>
+    </dialog>
+
+    <div class="chart-tooltip" id="chart-tooltip" aria-hidden="true" hidden></div>
+    <div class="toast-region" id="toasts" aria-live="polite"></div>
+    <div id="announcer" class="visually-hidden" aria-live="polite"></div>
+    <noscript><p class="noscript">This demo needs JavaScript to check files. The API is documented at <a href="/docs">/docs</a>.</p></noscript>
 </body>
 </html>

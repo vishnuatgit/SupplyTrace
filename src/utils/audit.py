@@ -28,3 +28,27 @@ def append_audit_entries(path: str, entries: list, max_bytes: int = DEFAULT_MAX_
     except Exception as e:
         logger.error(f"Failed to write audit log {path}: {e}")
         return False
+
+
+def read_audit_entries(path: str) -> list[tuple[dict, str]]:
+    """
+    Every entry in the audit log, newest first, each with its exact JSON line.
+    Lines that are not JSON objects (e.g. half-written) are skipped. A missing
+    log reads as empty.
+    """
+    if not os.path.exists(path):
+        return []
+    entries = []
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(entry, dict):
+                entries.append((entry, line))
+    entries.reverse()
+    return entries

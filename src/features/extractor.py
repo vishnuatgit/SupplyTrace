@@ -14,6 +14,32 @@ OPTIONAL_FIELDS = {
     "payment_account": {"PAYEEFINANCIALACCOUNT", "IBAN", "BANKACCOUNT"},
 }
 
+# What each model feature means, in plain language (shown on the model card).
+FEATURE_DESCRIPTIONS = {
+    "missing_id": "1 if no transaction ID was found",
+    "missing_amount": "1 if no amount was found",
+    "amount_not_numeric": "1 if the amount is not a plain decimal number",
+    "amount_negative": "1 if the amount is below zero",
+    "amount_above_review_limit": f"1 if the amount is above the {REVIEW_THRESHOLD:,} review limit",
+    "large_amount": f"1 if the amount is {LARGE_AMOUNT:,} or more",
+    "missing_optional_fields": (
+        "How many of issue date, currency, supplier and payment account are absent (0 to 4)"
+    ),
+    "nesting_depth": "How many levels deep the most deeply nested value sits",
+}
+
+# Short names for the same features, for charts and the risk explanation.
+FEATURE_LABELS = {
+    "missing_id": "Transaction ID missing",
+    "missing_amount": "Amount missing",
+    "amount_not_numeric": "Amount not a number",
+    "amount_negative": "Amount negative",
+    "amount_above_review_limit": "Amount above review limit",
+    "large_amount": f"Amount {LARGE_AMOUNT:,} or more",
+    "missing_optional_fields": "Optional fields missing",
+    "nesting_depth": "Nesting depth",
+}
+
 # Keys added by XMLParser.standardize rather than taken from the document.
 _MAPPED_KEYS = {"ID", "AMOUNT", "_source_file"}
 

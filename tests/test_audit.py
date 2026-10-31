@@ -1,6 +1,6 @@
 import json
 
-from src.utils.audit import append_audit_entries
+from src.utils.audit import append_audit_entries, read_audit_entries
 
 
 def test_entries_are_appended_as_json_lines(tmp_path):
@@ -27,3 +27,19 @@ def test_write_failure_is_reported_not_raised(tmp_path):
     blocker = tmp_path / "not_a_dir"
     blocker.write_text("a file where a directory should be")
     assert append_audit_entries(str(blocker / "audit_log.jsonl"), [{"n": 1}]) is False
+
+
+def test_entries_are_read_newest_first_with_their_lines(tmp_path):
+    path = tmp_path / "audit_log.jsonl"
+    append_audit_entries(str(path), [{"n": 1}, {"n": 2}])
+    with open(path, "a", encoding="utf-8") as f:
+        f.write("not json\n[1, 2]\n\n")  # a broken line, a non-object, a blank line
+    append_audit_entries(str(path), [{"n": 3}])
+
+    entries = read_audit_entries(str(path))
+    assert [entry["n"] for entry, _ in entries] == [3, 2, 1]
+    assert entries[0][1] == '{"n": 3}'
+
+
+def test_missing_log_reads_as_empty(tmp_path):
+    assert read_audit_entries(str(tmp_path / "none.jsonl")) == []
