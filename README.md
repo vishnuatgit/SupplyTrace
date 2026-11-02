@@ -8,6 +8,7 @@ Bad invoice data rarely fails where it arrives. It fails later, several systems 
 
 [![CI](https://github.com/vishnuatgit/SupplyTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnuatgit/SupplyTrace/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## Live demo
 
@@ -241,3 +242,7 @@ SupplyTrace/
 ## Author
 
 Built by Chandana Vishnu Jayanth · [Portfolio](https://vishnuatgit.github.io)
+
+## License
+
+[MIT](LICENSE) © 2026 Chandana Vishnu Jayanth
