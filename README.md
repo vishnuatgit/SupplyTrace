@@ -20,7 +20,7 @@ Everything in the demo is synthetic: the dashboard starts from a batch of 400 ge
 
 ![The SupplyTrace Payload Inspector checking an invoice whose amount is written as 12,50.00: the pipeline strip shows the time the server spent on each stage, the verdict is INVALID, and the rule checklist points at line 47](docs/screenshots/result.png)
 
-More screenshots: [dashboard](docs/screenshots/home.png), [batch check of the seven samples](docs/screenshots/cover.png), [mobile result](docs/screenshots/mobile.png).
+More screenshots: [dashboard](docs/screenshots/home.png), [batch check of the eight samples](docs/screenshots/cover.png), [mobile result](docs/screenshots/mobile.png).
 
 ## What it does
 
