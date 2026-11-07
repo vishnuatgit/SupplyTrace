@@ -26,6 +26,8 @@ function parseHash() {
 }
 
 function showRoute(route, { userNavigation = false, params = new URLSearchParams() } = {}) {
+    // A link inside the batch drawer can change the view: close the drawer with it.
+    document.getElementById('drawer')?.close();
     document.querySelectorAll('[data-view]').forEach(view => {
         view.hidden = view.dataset.view !== route;
     });
