@@ -72,6 +72,8 @@ def test_validation_negative_amount_has_its_own_message():
 def test_parse_amount_kinds():
     assert parse_amount(None) == ("missing", None)
     assert parse_amount("  ") == ("missing", None)
+    # Negative zero is not below zero, so it passes the "not negative" rule.
+    assert parse_amount("-0.00") == ("ok", -0.0)
     assert parse_amount("12,50.00") == ("invalid", None)
     assert parse_amount("-5") == ("negative", -5.0)
     assert parse_amount(" 99.5 ") == ("ok", 99.5)
