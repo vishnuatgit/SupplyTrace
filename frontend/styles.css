@@ -5036,3 +5036,55 @@ textarea.text-input {
         display: none;
     }
 }
+
+/* ---------- Duplicates ---------- */
+
+.dup-tag {
+    margin-left: 0.4rem;
+}
+
+.dup-tag.dup-exact { background: var(--inset-strong); color: var(--text-body); border-color: var(--border-hover); }
+.dup-tag.dup-likely { background: var(--warning-bg); color: var(--warning-text); border-color: var(--warning-border); }
+
+.duplicate-note {
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--border-hover);
+    border-radius: 0.5rem;
+    background: var(--inset);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.duplicate-note > .icon {
+    flex: none;
+    margin-top: 0.15rem;
+}
+
+.duplicate-note.duplicate-likely {
+    border-color: var(--warning-border);
+    background: var(--warning-bg);
+}
+
+.duplicate-note .muted {
+    margin-top: 0.15rem;
+}
+
+.duplicate-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-top: 0.3rem;
+}
+
+.duplicate-links a {
+    color: var(--primary-text);
+}
+
+.stack-on-mobile .dup-tag {
+    margin-left: 0;
+}

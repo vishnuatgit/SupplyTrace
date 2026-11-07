@@ -4,7 +4,7 @@
 
 import { getJson } from './api.js';
 import {
-    el, clear, icon, badge, flagBadge, formatDateTime, formatRelative, formatNumber, formatBytes,
+    el, clear, icon, badge, flagBadge, duplicateTag, formatDateTime, formatRelative, formatNumber, formatBytes,
     announce, toast, copyText, downloadFile, fileStamp,
 } from './ui.js';
 import { splitBar } from './charts.js';
@@ -60,7 +60,14 @@ function markCheckedFilter() {
     });
 }
 
-export function showAudit() {
+export function showAudit(params) {
+    // A link such as #/audit?q=invoice.xml opens the log already searching for it.
+    const q = params?.get('q');
+    if (q !== null && q !== undefined && q !== filters.q) {
+        filters.q = q;
+        dom.search.value = q;
+        limit = PAGE_SIZE;
+    }
     load();
 }
 
@@ -184,7 +191,8 @@ function render(data) {
                     el('span', { class: 'mono file-cell', text: entry.source_file || '–' }),
                     el('span', { class: 'cell-sub' },
                         origin ? el('span', { class: `origin-tag origin-${entry.origin}`, text: origin }) : null,
-                        entry.xml_size ? el('span', { text: formatBytes(entry.xml_size) }) : null)),
+                        entry.xml_size ? el('span', { text: formatBytes(entry.xml_size) }) : null,
+                        duplicateTag(entry.duplicate_kind))),
                 el('td', { 'data-label': 'Transaction ID' }, entry.transaction_id && entry.transaction_id !== 'N/A'
                     ? el('span', { class: 'mono', text: entry.transaction_id })
                     : el('span', { class: 'cell-muted', text: '–' })),

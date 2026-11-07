@@ -4,7 +4,7 @@
 
 import { MAX_BATCH_FILES, getText, postFilesStream, precheckFile } from './api.js';
 import {
-    el, clear, icon, badge, flagBadge, statusText, STATUS, formatNumber, formatPercent, formatMs,
+    el, clear, icon, badge, flagBadge, duplicateTag, statusText, STATUS, formatNumber, formatPercent, formatMs,
     plural, announce, toast, setupDropzone, setLoading, downloadFile, fileStamp,
 } from './ui.js';
 import { STATUS_ORDER, splitBar, riskStrip, barList } from './charts.js';
@@ -372,12 +372,14 @@ function sortedRows() {
         });
 }
 
-// A note and link when files of this batch are waiting in the review queue.
+// Notes for the batch head: duplicates found, and a link when files are in the review queue.
 function queueLink(rows) {
     const queued = rows.filter(row => row.result.review).length;
-    if (!queued) return null;
-    return el('span', {}, ` ${plural(queued, 'file')} ${queued === 1 ? 'is' : 'are'} in the review queue. `,
-        el('a', { href: '#/review', text: 'Open the queue' }));
+    const duplicates = rows.filter(row => row.result.duplicate).length;
+    if (!queued && !duplicates) return null;
+    return el('span', {},
+        duplicates ? ` ${plural(duplicates, 'duplicate')} flagged.` : null,
+        queued ? [` ${plural(queued, 'file')} ${queued === 1 ? 'is' : 'are'} in the review queue. `, el('a', { href: '#/review', text: 'Open the queue' })] : null);
 }
 
 // One table row. With onOpen the file name is a button that opens the drawer;
@@ -391,7 +393,7 @@ function resultRow(result, index, onOpen = null) {
         el('td', { class: 'num cell-muted', 'data-label': '#', text: index + 1 }),
         el('td', { 'data-label': 'File' }, file),
         el('td', { 'data-label': 'Transaction ID' }, result.id ? el('span', { class: 'mono', text: result.id }) : el('span', { class: 'cell-muted', text: '–' })),
-        el('td', { 'data-label': 'Status' }, badge(result.status)),
+        el('td', { 'data-label': 'Status' }, badge(result.status), duplicateTag(result.duplicate?.kind)),
         el('td', { 'data-label': 'Reasons' }, result.errors?.length
             ? el('span', { class: 'reasons' }, result.errors.map(message => el('span', { text: message })))
             : el('span', { class: 'cell-muted', text: 'None' })),

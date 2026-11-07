@@ -27,10 +27,10 @@ from src.api.analysis import (
 from src.api.upload_limit import UploadSizeLimitMiddleware
 from src.dashboard.overview import build_overview
 from src.ingestion.parser import AMOUNT_TAGS, ID_TAGS, MAX_GENERIC_ID_DEPTH
+from src.invoices.store import InvoiceStore
 from src.pipeline.bootstrap import ensure_demo_results
 from src.prediction.model import RiskPredictor
 from src.prediction.model_card import build_model_card
-from src.reviews.demo import seed_review_queue
 from src.reviews.store import (
     ANONYMOUS,
     QUEUEABLE,
@@ -39,6 +39,7 @@ from src.reviews.store import (
     ReviewStore,
 )
 from src.storage.database import DEFAULT_DB_PATH, create_database
+from src.storage.demo import seed_demo_data
 from src.utils.audit import DEFAULT_MAX_BYTES, append_audit_entries, read_audit_entries
 from src.validation.rules import REVIEW_THRESHOLD, RULES, Status
 
@@ -122,6 +123,15 @@ SAMPLES = [
         "description": "4,750,000.00, above the review limit",
         "expected": "REQUIRES_REVIEW",
     },
+    {
+        "id": "duplicate-id",
+        "label": "Likely duplicate",
+        "file": "duplicate_id.xml",
+        "description": "Passes every rule, but has the valid invoice's supplier and transaction ID",
+        "expected": "VALID",
+        # Not recorded at startup, so the first visitor to check it sees the duplicate flag.
+        "starter": False,
+    },
 ]
 
 # Statuses and origins an audit entry can have (rejected files are not logged).
@@ -181,11 +191,14 @@ async def lifespan(app: FastAPI):
     app.state.predictor = RiskPredictor()
     engine = create_database(DATABASE_URL, DB_PATH)
     app.state.reviews = ReviewStore(engine)
+    app.state.invoices = InvoiceStore(engine)
     if BOOTSTRAP_DEMO_DATA:
         ensure_demo_results(DATA_DIR, results_csv_path(), audit_log_path())
     results = train_from_results(app.state.predictor, results_csv_path())
     if BOOTSTRAP_DEMO_DATA:
-        seed_review_queue(app.state.reviews, SAMPLES, SAMPLES_DIR, app.state.predictor)
+        seed_demo_data(
+            app.state.reviews, app.state.invoices, SAMPLES, SAMPLES_DIR, app.state.predictor
+        )
     app.state.model_card = build_model_card(app.state.predictor, results)
     yield
     engine.dispose()
@@ -331,15 +344,37 @@ def record_result(result: dict, content: bytes, origin: str, state) -> dict:
     audit log, and a REQUIRES_REVIEW file is put in the review queue. `review` on
     the result says where it is in the queue (None when it is not queued).
     """
+    result["fingerprint"] = content_hash(content)
+    result["duplicate"] = record_invoice(state.invoices, result, result["fingerprint"], origin)
     log_result(result, origin)
-    result["review"] = None
+
+    # Why a person should look at it (if at all): the rules, or a likely duplicate.
+    reasons = []
     if result["status"] == "REQUIRES_REVIEW":
-        reason = "Rules: " + "; ".join(result["errors"] or ["amount above the review limit"])
-        result["review"] = queue_for_review(state.reviews, result, content, reason)
-    elif result["status"] == "INVALID":
-        # Not queued automatically, but show it if someone already sent this file.
+        reasons.append("Rules: " + "; ".join(result["errors"] or ["amount above the review limit"]))
+    duplicate = result["duplicate"]
+    if duplicate and duplicate["kind"] == "likely":
+        reasons.append(
+            f"Likely duplicate of invoice #{duplicate['of']['id']}: {duplicate['reason']}"
+        )
+    if reasons:
+        result["review"] = queue_for_review(state.reviews, result, content, "; ".join(reasons))
+    else:
+        # Not queued, but show where it is if someone already sent this file.
         result["review"] = find_review(state.reviews, content)
     return result
+
+
+def record_invoice(store: InvoiceStore, result: dict, fingerprint: str, origin: str):
+    """
+    Records the invoice for duplicate detection (best effort, like the audit log) and
+    returns its duplicate flag, or None when it is not a duplicate or the database failed.
+    """
+    try:
+        return store.record(result, fingerprint, origin)
+    except Exception as e:
+        logger.error(f"Could not record {result['filename']}: {e}")
+        return None
 
 
 def find_review(store: ReviewStore, content: bytes):
@@ -393,6 +428,8 @@ def write_single_audit_log(result: dict, origin: str = "web") -> str | None:
         "risk_score": result["prediction"]["risk_score"],
         "risk_flag": result["prediction"]["risk_flag"],
         "origin": origin,
+        "duplicate_kind": (result.get("duplicate") or {}).get("kind"),
+        "duplicate_of": ((result.get("duplicate") or {}).get("of") or {}).get("id"),
         "processing_ms": result["processing_ms"],
         "xml_size": features.get("xml_size"),
         "nesting_depth": features.get("nesting_depth"),
@@ -490,7 +527,7 @@ def review_call(action, *args):
 def list_reviews(
     request: Request,
     state: Literal["open", "approved", "rejected"] | None = None,
-    status: Literal["INVALID", "REQUIRES_REVIEW"] | None = None,
+    status: Literal["VALID", "INVALID", "REQUIRES_REVIEW"] | None = None,
     assignee: str | None = Query(None, max_length=60, description='A name, or "unassigned"'),
     q: str | None = Query(None, max_length=200, description="Search file names and IDs"),
     limit: int = Query(100, ge=1, le=500),
@@ -533,11 +570,14 @@ async def send_to_review(
             status_code=400,
             detail="Only invoices that fail a rule or need review can be sent to review",
         )
+    fingerprint = content_hash(content)
+    result["fingerprint"] = fingerprint
+    result["duplicate"] = request.app.state.invoices.flag_for(fingerprint)
     reason = "Sent to review: " + "; ".join(result["errors"] or ["needs review"])
     review, created = await run_in_threadpool(
         request.app.state.reviews.queue,
         result,
-        content_hash(content),
+        fingerprint,
         reason,
         actor.strip() or ANONYMOUS,
     )

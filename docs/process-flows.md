@@ -187,7 +187,7 @@ sequenceDiagram
     actor U as Visitor
     participant BJ as batch.js
     participant API as FastAPI
-    U->>BJ: Check the 7 sample invoices, or drop or choose files
+    U->>BJ: Check the 8 sample invoices, or drop or choose files
     BJ->>BJ: over 20 files? stop with a message
     BJ->>BJ: precheckFile each: not .xml, over 1 MB or empty becomes a REJECTED row, not sent
     BJ-->>U: live table: one row per file, Queued, the first one Checking
@@ -205,7 +205,7 @@ sequenceDiagram
 
 **Steps**
 
-1. The sample button's label and hint come from `/api/samples` (`describeSamples()`): "Check the 7 sample invoices", "2 valid, 4 invalid and 1 that needs review, all synthetic."
+1. The sample button's label and hint come from `/api/samples` (`describeSamples()`): "Check the 8 sample invoices", "3 valid, 4 invalid and 1 that needs review, all synthetic."
 2. `runSamples()` shows "Fetching the sample invoices…" with skeleton rows, fetches every sample's XML and builds `File`s; `runFiles()` takes dropped or chosen files (a multi-file drop on the Check view leads here too).
 3. `check()` refuses more than 20 files with a message and turns files the server would refuse anyway (not `.xml`, over 1 MB, empty) into REJECTED rows without uploading them. `showLive()` then shows the table at once: refused files are final, every other file is "Queued" and the first is "Checking". The rest are posted with `postFilesStream()` (`api.js`), which reads the NDJSON response line by line. Each `result` line replaces its row with the real one (a short fade-in, none under reduced motion) and marks the next file as Checking (`liveResult()`); the progress panel shows "Checked bad_amount.xml" and "3 / 7".
 4. When the summary line arrives, `render()` shows: Files and per-status tiles with shares, a stacked status bar, a strip plot of every file's risk score on a 0 to 100% axis with the 50% threshold (drawn at its container's width and redrawn on resize; dots are focusable and open the drawer), a bar list of the rules broken in this batch, and the table. `rememberChecks()` records the files so they show as You on the dashboard.

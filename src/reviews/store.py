@@ -19,7 +19,8 @@ from src.storage.schema import review_events, reviews
 OPEN, APPROVED, REJECTED = "open", "approved", "rejected"
 STATES = (OPEN, APPROVED, REJECTED)
 
-# Statuses that can enter the queue (a VALID invoice needs no person).
+# Statuses that can be sent to the queue by hand. (A VALID invoice only gets there
+# when it is flagged as a likely duplicate, which the server queues itself.)
 QUEUEABLE = ("INVALID", "REQUIRES_REVIEW")
 
 SYSTEM_ACTOR = "system"
@@ -52,6 +53,8 @@ def _summary(row) -> dict:
         "assignee": row.assignee,
         "created_at": row.created_at,
         "updated_at": row.updated_at,
+        # exact or likely, when the analysis found this invoice to be a duplicate
+        "duplicate": (json.loads(row.result_json).get("duplicate") or {}).get("kind"),
     }
 
 
@@ -67,8 +70,6 @@ class ReviewStore:
         An invoice (the same file content) is queued only once: if it has a review
         already, in any state, that review is returned and created is False.
         """
-        if result["status"] not in QUEUEABLE:
-            raise ValueError(f"A {result['status']} invoice does not go to review")
         now = _now()
         with self.engine.begin() as conn:
             existing = conn.execute(
