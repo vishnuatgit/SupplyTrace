@@ -8,6 +8,8 @@ from typing import Literal
 import pandas as pd
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
@@ -176,7 +178,24 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 # The frontend is served by this app (same origin), so no CORS headers are needed.
+@app.exception_handler(RequestValidationError)
+async def upload_validation_handler(request: Request, exc: RequestValidationError):
+    """No usable file in an upload (missing, or sent without a filename): the app's own message, still a 422."""
+    upload_fields = {("body", "file"), ("body", "files")}
+    if request.url.path.startswith("/api/analyze") and any(
+        tuple(err.get("loc", ()))[:2] in upload_fields for err in exc.errors()
+    ):
+        return JSONResponse(
+            {
+                "detail": "Attach an XML file with a filename: the 'file' field for one invoice, 'files' for a batch."
+            },
+            status_code=422,
+        )
+    return await request_validation_exception_handler(request, exc)
+
+
 app.add_middleware(
     UploadSizeLimitMiddleware,
     max_bytes=MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES,

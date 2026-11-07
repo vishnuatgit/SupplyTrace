@@ -4677,3 +4677,10 @@ th.num .sort-btn {
         grid-template-columns: 6rem minmax(0, 1fr);
     }
 }
+
+/* Batch: a "Sort by" menu for phones, where the table's sortable header row is hidden (js/batch.js) */
+.batch-sort { display: none; }
+@media (max-width: 720px) {
+    .batch-sort { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 14px; }
+    .batch-sort select { flex: 1; min-height: 44px; }
+}

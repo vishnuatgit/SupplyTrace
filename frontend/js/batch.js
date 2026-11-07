@@ -411,7 +411,19 @@ function renderTable() {
 
     const body = sortedRows().map(({ result, index }) => resultRow(result, index, openDrawer));
     const counts = countStatuses(lastRun.rows);
-    clear(wrap).append(el('table', { class: 'data-table batch-table stack-on-mobile' },
+    // On phones the table turns into cards and its header row is hidden, so this menu sorts instead.
+    const sortMenu = el('label', { class: 'batch-sort' }, el('span', { text: 'Sort by' }),
+        el('select', { on: { change: event => {
+            const [key, dir] = event.target.value.split(':');
+            sort = { key, dir: Number(dir) };
+            renderTable();
+            wrap.querySelector('.batch-sort select')?.focus();
+        } } }, COLUMNS.flatMap(column => [1, -1].map(dir => el('option', {
+            value: `${column.key}:${dir}`,
+            selected: sort.key === column.key && sort.dir === dir,
+            text: `${column.key === 'index' ? 'File order' : column.label}, ${dir === 1 ? 'ascending' : 'descending'}`,
+        })))));
+    clear(wrap).append(sortMenu, el('table', { class: 'data-table batch-table stack-on-mobile' },
         el('caption', { class: 'visually-hidden', text: 'Batch results. Column headers sort the table.' }),
         el('thead', {}, header),
         el('tbody', {}, body),
