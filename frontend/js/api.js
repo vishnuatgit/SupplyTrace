@@ -127,11 +127,14 @@ export function precheckFile(file) {
     return null;
 }
 
-// Sends a JSON body with POST and returns the JSON reply.
-export async function postJson(url, body) {
+// Sends a JSON body (POST or PUT) and returns the JSON reply.
+async function sendJson(method, url, body) {
     return readJson(await request(url, {
-        method: 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
     }));
 }
+
+export const postJson = (url, body) => sendJson('POST', url, body);
+export const putJson = (url, body) => sendJson('PUT', url, body);

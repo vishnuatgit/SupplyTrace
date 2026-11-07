@@ -1,4 +1,4 @@
-// Entry point: a small hash router over the six views, the theme toggle, and
+// Entry point: a small hash router over the seven views, the theme toggle, and
 // the wiring between views. Routes look like #/check, #/batch, #/review,
 // #/audit, #/rules, #/about. Hashes without the slash (#main) are in-page links.
 
@@ -6,6 +6,7 @@ import { initCheck, getSamples, runSampleById, editInSandbox } from './check.js'
 import { initBatch, runSamples, runFiles } from './batch.js';
 import { initAudit, showAudit } from './audit.js';
 import { initReview, showReview, refreshReviewCount } from './review.js';
+import { initVendors, showVendors } from './vendors.js';
 import { showReference } from './reference.js';
 import { initOverview, refreshOverview, rememberChecks } from './overview.js';
 import { initPipeline } from './pipeline.js';
@@ -15,6 +16,7 @@ const ROUTES = {
     check: { title: 'SupplyTrace | Supplier XML invoice validation', onShow: refreshOverview },
     batch: { title: 'Batch check · SupplyTrace' },
     review: { title: 'Review queue · SupplyTrace', onShow: showReview },
+    vendors: { title: 'Vendors · SupplyTrace', onShow: showVendors },
     audit: { title: 'Audit log · SupplyTrace', onShow: showAudit },
     rules: { title: 'Rules and model · SupplyTrace', onShow: showReference },
     about: { title: 'About · SupplyTrace' },
@@ -122,6 +124,7 @@ initBatch({
 });
 initAudit();
 initReview();
+initVendors();
 refreshReviewCount();
 
 window.addEventListener('hashchange', () => handleRoute({ userNavigation: true }));
