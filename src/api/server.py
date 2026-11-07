@@ -470,7 +470,8 @@ def _matches(entry: dict, query: str) -> bool:
 def get_audit(
     status: AuditStatus | None = None,
     origin: AuditOrigin | None = Query(
-        None, description="web (single check), web-batch (batch check) or pipeline (startup batch)"
+        None,
+        description="web (single check), web-batch (batch check), pipeline (startup batch) or vendor (vendor edit)",
     ),
     q: str | None = Query(None, max_length=200, description="Search file names and IDs"),
     limit: int = Query(50, ge=1, le=MAX_AUDIT_PAGE),

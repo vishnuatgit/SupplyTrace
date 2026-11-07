@@ -14,7 +14,7 @@ Bad invoice data rarely fails where it arrives. It fails later, several systems 
 
 **[supplytrace-fkpq.onrender.com](https://supplytrace-fkpq.onrender.com)** (free hosting: the first visit can take about a minute to wake it up). Try **Batch → Check the 8 sample invoices**.
 
-Pick one of the sample invoices (valid, sparse, missing ID, missing amount, bad amount, negative amount, high value), drop your own XML file (up to 1 MB), edit XML in the sandbox, or check a batch of up to 20 files. The demo runs on Render's free tier, which puts the service to sleep after 15 minutes without traffic, so the first request after a quiet spell can take up to a minute.
+Pick one of the sample invoices (valid, sparse, missing ID, missing amount, bad amount, negative amount, high value, likely duplicate), drop your own XML file (up to 1 MB), edit XML in the sandbox, or check a batch of up to 20 files. The demo runs on Render's free tier, which puts the service to sleep after 15 minutes without traffic, so the first request after a quiet spell can take up to a minute.
 
 Everything in the demo is synthetic: the dashboard starts from a batch of 400 generated invoices and the risk model is trained on them. Please don't upload real invoices.
 
@@ -39,7 +39,7 @@ Every user and system flow is written up, with diagrams, in **[docs/process-flow
 - **Results you can act on.** A verdict banner, a rule-by-rule checklist where clicking a rule jumps to and highlights its line, the XML with syntax colours, line numbers and marked lines, the risk score with a waterfall of what drove it, and a JSON report download.
 - **Malformed XML points at the break.** A file that is not well-formed gets the line, column and reason from the parser. The page marks that line, and Fix in sandbox opens the file with the caret on it, the reason above the editor and the line marked until the next edit.
 - **Batch check.** Up to 20 files of up to 1 MB, streamed back one by one: each file's row fills in as soon as the server has checked it, with a real progress bar. Then summary tiles, a status bar, a risk strip plot, the rules broken, a sortable table, a drawer to drill into any file (previous and next follow the table's sort), and CSV or JSON downloads. A file that cannot be read is listed as `REJECTED` instead of failing the batch, and a batch cut off by the network can be retried as it was.
-- **Review queue.** Invoices above the review limit are queued automatically, and an invalid one can be sent from its result. Assign a reviewer, comment, approve or reject (a comment is required), and see the full append-only history per invoice, next to the rule checklist and risk explanation the check produced. Walkthrough: [docs/walkthroughs/01-review-workflow.md](docs/walkthroughs/01-review-workflow.md); what is planned and what was dropped: [docs/roadmap.md](docs/roadmap.md).
+- **Review queue.** Invoices above the review limit and likely duplicates are queued automatically, and an invalid one can be sent from its result. Assign a reviewer, comment, approve or reject (a comment is required), and see the full append-only history per invoice, next to the rule checklist and risk explanation the check produced. Walkthrough: [docs/walkthroughs/01-review-workflow.md](docs/walkthroughs/01-review-workflow.md); what is planned and what was dropped: [docs/roadmap.md](docs/roadmap.md).
 - **Duplicate detection.** Every analysed invoice is fingerprinted (SHA-256 of the file) and its supplier, ID, date and amount recorded. The same file again is an **exact** duplicate; a different file with the same supplier and ID, or the same supplier and amount within 7 days, is a **likely** duplicate and goes to the review queue. The flag, the reason and the earlier invoice show in single and batch results, the review page and the audit log. Walkthrough: [docs/walkthroughs/02-duplicate-detection.md](docs/walkthroughs/02-duplicate-detection.md).
 - **Vendor directory.** Every supplier seen in the checked invoices, with invoice count, status breakdown, total and average amount (per currency), duplicates flagged, average risk and last seen, a list of its invoices, editable notes and a **trusted** flag. The trusted flag is shown on results and written to the audit log, and never changes validation. Walkthrough: [docs/walkthroughs/03-vendor-directory.md](docs/walkthroughs/03-vendor-directory.md).
 - **Audit log.** Filter by status and source, search file names and transaction IDs, open and copy the exact JSON line, export what is shown.
@@ -88,7 +88,7 @@ flowchart LR
     V --> F[Features<br/>8 validation signals]
     F --> M[Score<br/>Random Forest,<br/>experimental, explained]
     M --> LOG[(Audit log<br/>JSON Lines, rotating)]
-    M --> DB[(SQLite or PostgreSQL<br/>review queue)]
+    M --> DB[(SQLite or PostgreSQL<br/>reviews, invoices, vendors)]
     M -. result with checks, lines, risk, timings .-> U
     LOG -. /api/overview, /api/audit .-> U
 ```
@@ -140,9 +140,9 @@ All settings are optional environment variables. Relative paths are resolved aga
 | `SUPPLYTRACE_AUDIT_DIR` | same as results | Directory for `audit_log.jsonl`. |
 | `SUPPLYTRACE_AUDIT_MAX_BYTES` | `1000000` | Size at which the audit log is rotated to `audit_log.jsonl.1`. |
 | `SUPPLYTRACE_MAX_UPLOAD_BYTES` | `1000000` | Largest accepted file, for single and batch checks. The frontend checks the same 1 MB limit before uploading. |
-| `SUPPLYTRACE_BOOTSTRAP` | `1` | Set to `0` to skip generating the demo dataset (and the sample reviews) on startup. |
-| `SUPPLYTRACE_DB_PATH` | `data/supplytrace.db` | SQLite file for the review queue. |
-| `DATABASE_URL` | unset | Use another database instead, for example a free PostgreSQL on Neon (also install a driver such as `psycopg2-binary`). On Render's free tier the disk is ephemeral, so with SQLite the reviews reset on every redeploy. |
+| `SUPPLYTRACE_BOOTSTRAP` | `1` | Set to `0` to skip generating the demo dataset (and the starter invoices and sample reviews) on startup. |
+| `SUPPLYTRACE_DB_PATH` | `data/supplytrace.db` | SQLite file for the review queue, the invoice records behind duplicate detection and the vendor notes. |
+| `DATABASE_URL` | unset | Use another database instead, for example a free PostgreSQL on Neon (also install a driver such as `psycopg2-binary`). On Render's free tier the disk is ephemeral, so with SQLite the reviews, invoice records and vendor notes reset on every redeploy. |
 
 The dev server (`python -m src.api.server`) listens on `127.0.0.1:8000` with auto-reload; in production run `uvicorn src.api.server:app --host 0.0.0.0 --port <port>`.
 
@@ -180,11 +180,21 @@ The environment variables in [Configuration](#configuration) can be added in the
 
 | Method | Path | Description |
 |:--|:--|:--|
-| `POST` | `/api/analyze` | Multipart upload (`file`, must end in `.xml`, up to 1 MB). Returns `filename`, `id`, `status`, `errors`, `findings` (each broken rule with `line`, `end_line` and a `note`), `checks` (all five rules with `state`, `outcome`, `line` and `note`), `fields` (where the ID and amount were found), `features`, `prediction` (`risk_score`, `risk_flag`, or `"N/A"` without a model), `risk_drivers` (`base` and per-feature `contributions` in percentage points), `processing_ms`, `timings_ms` (`parse`, `validate`, `score`, `locate`), `logged` and `logged_at` (the audit entry's timestamp). `400` for a non-XML name, an empty file, a DTD, too-deep nesting or malformed XML (the body then also has `line`, `column` and `reason`); `413` for a file over the limit. |
+| `POST` | `/api/analyze` | Multipart upload (`file`, must end in `.xml`, up to 1 MB). Returns `filename`, `id`, `status`, `errors`, `findings` (each broken rule with `line`, `end_line` and a `note`), `checks` (all five rules with `state`, `outcome`, `line` and `note`), `fields` (where the ID and amount were found), `features`, `prediction` (`risk_score`, `risk_flag`, or `"N/A"` without a model), `risk_drivers` (`base` and per-feature `contributions` in percentage points), `processing_ms`, `timings_ms` (`parse`, `validate`, `score`, `locate`), `logged` and `logged_at` (the audit entry's timestamp), plus `fingerprint`, `duplicate`, `vendor` and `review`. `400` for a non-XML name, an empty file, a DTD, too-deep nesting or malformed XML (the body then also has `line`, `column` and `reason`); `413` for a file over the limit. |
 | `POST` | `/api/analyze/batch` | Multipart upload of up to 20 `files`. Returns `count`, a per-status `summary` and `results` in the same shape as `/api/analyze`; a file that cannot be read gets status `REJECTED` with the reason (and `parse_error` for malformed XML). `400` for more than 20 files; `413` for a request body over the batch limit. |
 | `POST` | `/api/analyze/batch/stream` | The same batch as newline-delimited JSON: a `start` line, one `result` line per file as soon as it is checked, and a `summary` line. |
 | `GET` | `/api/overview` | The dashboard, from the audit log: totals per status and source, valid share, invalid rate, average risk, a 10-bin risk histogram split by flag, the top reasons and the `recent` (1 to 50) newest entries. |
-| `GET` | `/api/audit` | Audit log entries, newest first. Query: `status`, `origin` (`web`, `web-batch`, `pipeline`), `q` (searches file names and IDs) and `limit` (1 to 500, default 50). Returns `total`, `counts` per status, `matching` and `entries`, each with the parsed `entry` and its exact JSON `line`. |
+| `GET` | `/api/audit` | Audit log entries, newest first. Query: `status`, `origin` (`web`, `web-batch`, `pipeline`, `vendor`), `q` (searches file names and IDs) and `limit` (1 to 500, default 50). Returns `total`, `counts` per status, `matching` and `entries`, each with the parsed `entry` and its exact JSON `line`. |
+| `GET` | `/api/vendors` | Vendors with statistics, notes and trusted flag. Query: `q`, `trusted`, `sort` (`name`, `invoices`, `total`, `duplicates`, `risk`, `last_seen`). |
+| `GET` | `/api/vendors/{id}` | One vendor. `404` for an unknown id. |
+| `GET` | `/api/vendors/{id}/invoices` | The vendor's invoices, newest first. Query: `status`, `duplicates`, `limit` (1 to 500, default 100). |
+| `PUT` | `/api/vendors/{id}` | Save `notes` (up to 2,000 characters) and/or `trusted`, with the `actor` (1 to 60 characters). `422` if neither is sent; a real change is written to the audit log. |
+| `GET` | `/api/reviews` | The review queue, newest first. Query: `state` (`open`, `approved`, `rejected`), `status`, `assignee` (a name or `unassigned`), `q`, `limit` (1 to 500, default 100). Returns `counts` per state, `matching`, `reviews` and `assignees`. |
+| `GET` | `/api/reviews/{id}` | One review with its stored analysis and full `history`. `404` if it does not exist. |
+| `POST` | `/api/reviews` | Multipart upload (`file`, optional `actor`): the file is analysed again and an `INVALID` or `REQUIRES_REVIEW` invoice is queued. `400` for a `VALID` one; `created` is false if the file is already queued. |
+| `POST` | `/api/reviews/{id}/assign` | JSON `reviewer` and `actor` (1 to 60 characters each). `409` if the review is already decided. |
+| `POST` | `/api/reviews/{id}/comments` | JSON `actor` and `comment` (1 to 2,000 characters), allowed in any state. |
+| `POST` | `/api/reviews/{id}/approve`, `/reject` | JSON `actor` and `comment` (required). `409` if the review is already decided. |
 | `GET` | `/api/rules` | The validation rules in plain language, with examples, and where the ID and amount are looked for. |
 | `GET` | `/api/model` | The model card: settings, features with importances, training data and holdout metrics. |
 | `GET` | `/api/samples` | The sample invoices (`id`, `label`, `filename`, `description`, `expected` status). |
@@ -200,7 +210,7 @@ The environment variables in [Configuration](#configuration) can be added in the
 ```text
 SupplyTrace/
 ├── frontend/
-│   ├── index.html         the five views: check (dashboard), batch, audit log, rules and model, about
+│   ├── index.html         the seven views: check (dashboard), batch, review, vendors, audit log, rules and model, about
 │   ├── styles.css         dark and light themes
 │   ├── favicon.svg
 │   └── js/
@@ -213,6 +223,9 @@ SupplyTrace/
 │       ├── overview.js    KPI ribbon, charts, Recent Analyses, 30-second refresh
 │       ├── charts.js      SVG charts: ring, histogram, bars, strip plot, gauge, waterfall
 │       ├── batch.js       streamed batch with live rows, summary, sortable table, drawer, CSV/JSON
+│       ├── review.js      review queue and one review: assign, comment, approve, reject, history
+│       ├── vendors.js     vendor directory and one vendor: statistics, notes, trusted flag, invoices
+│       ├── reviewer.js    the reviewer name remembered in the browser
 │       ├── audit.js       audit log filters, search, JSON lines, export
 │       ├── reference.js   rules and model card
 │       ├── api.js         requests, streaming, error messages, upload limits
@@ -223,6 +236,10 @@ SupplyTrace/
 │   ├── ingestion/         xml_loader.py (safe parse, flatten), parser.py (find ID and amount),
 │   │                      locator.py (line numbers)
 │   ├── validation/        rules.py (the rules, the checklist and the validator)
+│   ├── invoices/          fields.py (key fields), store.py (fingerprints and duplicate detection)
+│   ├── reviews/           store.py (review queue, assignment, comments, history)
+│   ├── vendors/           store.py (vendor statistics, notes, trusted flag)
+│   ├── storage/           schema.py (tables), database.py (engine), demo.py (starter data)
 │   ├── features/          extractor.py (risk signals)
 │   ├── prediction/        model.py (RiskPredictor and its explanation), model_card.py (holdout evaluation)
 │   ├── pipeline/          orchestrator.py (batch run), synthetic.py (data generator),
@@ -231,7 +248,7 @@ SupplyTrace/
 │   └── utils/             audit.py (audit log writer and reader)
 ├── scripts/               generate_data.py, run_pipeline.py
 ├── tests/                 pytest suite
-├── docs/                  architecture.md, process-flows.md, screenshots/
+├── docs/                  architecture.md, process-flows.md, roadmap.md, walkthroughs/, screenshots/
 ├── render.yaml            Render Blueprint for the live demo
 ├── requirements.txt       pinned runtime dependencies
 └── requirements-dev.txt   test and lint tools
@@ -240,7 +257,7 @@ SupplyTrace/
 ## Limitations
 
 - The risk model is trained on synthetic invoices with simulated outcomes. Real use would need outcome data from the downstream system, and the scores are not calibrated probabilities.
-- Five rules only: no checks on line totals, tax, dates, currencies or duplicate invoices.
+- Five rules only: no checks on line totals, tax, dates or currencies. Duplicate detection is separate from the rules and compares only supplier, invoice ID, amount and issue date.
 - Repeated elements, such as several invoice lines, collapse to the last one when flattened, and XML attributes are ignored.
 - The audit log is one shared file: every visitor sees the same log and dashboard, and on Render's free tier it resets on every restart or redeploy.
 - The model is retrained at every startup; there is no saved, versioned model.

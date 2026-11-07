@@ -88,8 +88,9 @@ the earlier file (`#/audit?q=...`).
 - Detection starts from when the database starts. On Render's free tier the disk
   is ephemeral, so recorded invoices (and flags) reset on every redeploy unless
   `DATABASE_URL` points at a free PostgreSQL such as Neon (optional).
-- The startup batch of 400 synthetic invoices is not recorded, only checks made
-  through the web page and the starter samples.
+- The startup batch of 400 synthetic invoices is recorded as demo data (so the
+  vendor directory has suppliers to show), and so are the starter samples. Those
+  rows never count as exact matches but can be the earlier invoice of a likely one.
 
 ## Interview questions
 

@@ -7,7 +7,7 @@ the label was the end of the story: a person had to notice it in the audit log.
 The review workflow gives the labels a destination.
 
 - An invoice labelled `REQUIRES_REVIEW` (amount above the limit) goes into a
-  **review queue** automatically.
+  **review queue** automatically, and so does a likely duplicate (walkthrough 02).
 - An `INVALID` invoice can be sent to the queue with a **Send to review** button
   on its result, when someone should follow it up with the supplier.
 - A reviewer is **assigned**, people **comment**, and one of them **approves or
@@ -22,7 +22,7 @@ It does not change validation: the status still comes only from the rules.
 ```
 upload -> analyze_document -> record_result -> audit log
                                    |
-                                   +-> REQUIRES_REVIEW: ReviewStore.queue -> SQLite
+                                   +-> REQUIRES_REVIEW or likely duplicate: ReviewStore.queue -> SQLite
 POST /api/reviews (file)  -> analyse again -> ReviewStore.queue (INVALID sent by a person)
 Review page -> /api/reviews/... -> ReviewStore.assign / comment / approve / reject
 ```
@@ -32,14 +32,14 @@ Review page -> /api/reviews/... -> ReviewStore.assign / comment / approve / reje
 | `src/storage/schema.py` | The two tables, written with SQLAlchemy Core: `reviews` (current state) and `review_events` (history). |
 | `src/storage/database.py` | Builds the engine from `DATABASE_URL`, or a SQLite file (`SUPPLYTRACE_DB_PATH`, default `data/supplytrace.db`), and creates missing tables at startup. |
 | `src/reviews/store.py` | `ReviewStore`: every read and every state change. The only code that writes the tables. |
-| `src/reviews/demo.py` | Fills an empty queue with the sample invoices so a first visit shows the workflow. |
+| `src/storage/demo.py` | Fills an empty queue with the sample invoices so a first visit shows the workflow. |
 | `src/api/server.py` | `record_result()` (audit log plus auto-queue) and the `/api/reviews` endpoints. |
 | `frontend/js/review.js` | The Review page: queue, filters, one review with actions and history. |
-| `frontend/js/result.js` | The "in the review queue" note and the "Send to review" button on every result (single check and the batch drawer). |
+| `frontend/js/result.js` | The "in the review queue" note and the "Send to review" button on `INVALID` results (single check and the batch drawer). |
 
 **Data flow for an automatic review.** `POST /api/analyze` runs
 `analyze_document()` (unchanged), then `record_result()` writes the audit entry
-and, for `REQUIRES_REVIEW`, calls `ReviewStore.queue()`. That stores the whole
+and, for `REQUIRES_REVIEW` or a likely duplicate, calls `ReviewStore.queue()`. That stores the whole
 analysis (rule checklist, risk drivers) as JSON next to the review so the
 detail page can show it later. The result sent back to the browser has a new
 `review` field (`id`, `state`, `assignee`) that the page turns into a link.

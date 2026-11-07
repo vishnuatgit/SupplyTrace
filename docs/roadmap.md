@@ -2,10 +2,10 @@
 
 SupplyTrace checks one invoice at a time and logs the result. The next step is
 to make it useful to the people who handle what the checks find. Nine ideas
-were on the wishlist. Three are being built, and six are not, for the reasons
+were on the wishlist. Three are built, and six are not, for the reasons
 below.
 
-## Decision: build these three
+## Decision: build these three (done)
 
 1. **Review workflow.** A queue for invoices that need a person: assign a
    reviewer, comment, approve or reject (with a required comment), and keep a
@@ -18,7 +18,7 @@ below.
    per-vendor statistics, notes and a "trusted" flag that never changes a
    validation result.
 
-They are built in this order because each one uses the one before: duplicates
+They were built in this order because each one uses the one before: duplicates
 send invoices to the review queue, and the vendor directory counts duplicates.
 All three keep their state in a small database (SQLite by default, PostgreSQL
 through `DATABASE_URL`).

@@ -366,7 +366,7 @@
             <section class="view" id="view-review" data-view="review" aria-labelledby="review-title" hidden>
                 <div class="view-head">
                     <h1 id="review-title" class="view-title" tabindex="-1">Review queue</h1>
-                    <p class="view-lede">Invoices that need a person: files above the review limit are queued automatically, and you can send an invalid file from its result. Assign a reviewer, comment, then approve or reject; every step is kept in the invoice's history. There is no sign-in in the demo, so enter a name to sign your actions.</p>
+                    <p class="view-lede">Invoices that need a person: files above the review limit and likely duplicates are queued automatically, and you can send an invalid file from its result. Assign a reviewer, comment, then approve or reject; every step is kept in the invoice's history. There is no sign-in in the demo, so enter a name to sign your actions.</p>
                     <label class="name-field">
                         <span class="field-label">Your name</span>
                         <input type="text" id="review-name" class="text-input" maxlength="60" placeholder="e.g. Asha" autocomplete="nickname">
@@ -550,6 +550,7 @@
                                     <tr><th scope="row">XML</th><td>defusedxml, Python's expat</td><td>Safe parsing of untrusted files; a second expat pass records line numbers.</td></tr>
                                     <tr><th scope="row">Data</th><td>pandas, NumPy</td><td>Batch results, the model's training table and its explanations.</td></tr>
                                     <tr><th scope="row">Model</th><td>scikit-learn Random Forest</td><td>Small, repeatable with a fixed seed, and explainable tree by tree.</td></tr>
+                                    <tr><th scope="row">Storage</th><td>SQLAlchemy Core, SQLite</td><td>The review queue, duplicate records and vendor notes; PostgreSQL through <code>DATABASE_URL</code>.</td></tr>
                                     <tr><th scope="row">Frontend</th><td>HTML, CSS, JavaScript modules</td><td>No framework, no build step; charts are hand-drawn SVG.</td></tr>
                                     <tr><th scope="row">Quality</th><td>pytest, Ruff, GitHub Actions</td><td>Unit and integration tests and lint on every push, on Python 3.11 and 3.12.</td></tr>
                                     <tr><th scope="row">Hosting</th><td>Render</td><td>A Blueprint (<code>render.yaml</code>) builds the demo data at deploy time.</td></tr>
@@ -566,7 +567,7 @@
                             <div><dt>Untrusted XML is parsed defensively.</dt>
                             <dd><code>defusedxml</code> refuses DTDs, so there is no entity expansion and no external entities. Documents nested more than 100 levels deep are rejected, and uploads over 1&nbsp;MB get a 413 before the body is read.</dd></div>
                             <div><dt>Uploads are not stored.</dt>
-                            <dd>Files are parsed in memory. Only a one-line summary (file name, transaction ID, status, reasons, risk score, size) goes to the audit log.</dd></div>
+                            <dd>Files are parsed in memory. The audit log gets a one-line summary (file name, transaction ID, status, reasons, risk score, size), and the database keeps a SHA-256 fingerprint plus the supplier, amount and issue date for duplicate detection.</dd></div>
                             <div><dt>One pipeline for every entry point.</dt>
                             <dd>A single check, a batch and the streamed batch call the same function, so a file gets the same answer either way. Tests compare them.</dd></div>
                             <div><dt>Findings point at lines.</dt>
@@ -574,7 +575,7 @@
                             <div><dt>The score explains itself.</dt>
                             <dd>Each tree's path is followed and every split's change in failure rate is credited to its feature, so the base rate plus the contributions adds up to the score.</dd></div>
                             <div><dt>Plain files over infrastructure.</dt>
-                            <dd>Batch results are a CSV and the audit log is a JSON Lines file: easy to inspect, enough for a demo, and simple to swap for a database later.</dd></div>
+                            <dd>Batch results are a CSV and the audit log is a JSON Lines file: easy to inspect and enough for a demo. Only the review queue, duplicate records and vendor notes need a database, a small SQLite file (PostgreSQL through <code>DATABASE_URL</code>).</dd></div>
                             <div><dt>Reproducible data.</dt>
                             <dd>The synthetic invoices come from a fixed seed, so the dataset, the model and the model card come out the same on every run.</dd></div>
                         </dl>
@@ -584,9 +585,9 @@
                         <h2>Limitations</h2>
                         <ul class="plain-list">
                             <li>The risk model is trained on synthetic invoices with simulated outcomes. It says nothing about real suppliers.</li>
-                            <li>Five rules only: no checks on line totals, tax, dates, currencies or duplicate invoices.</li>
+                            <li>Five rules only: no checks on line totals, tax, dates or currencies. Duplicate detection is separate from the rules and compares only supplier, invoice ID, amount and issue date.</li>
                             <li>Repeated elements, such as several invoice lines, collapse to the last one when flattened, and XML attributes are ignored.</li>
-                            <li>The audit log is one shared file on a temporary disk: every visitor sees the same log, and it resets when the hosted demo restarts.</li>
+                            <li>The audit log and the database (reviews, duplicate records, vendor notes) are shared and live on a temporary disk: every visitor sees the same data, and it resets when the hosted demo restarts.</li>
                             <li>No accounts or authentication. It is a demo, not a multi-user service.</li>
                         </ul>
                         <h2>Source</h2>
@@ -602,7 +603,7 @@
                 &middot; <a href="https://github.com/vishnuatgit/SupplyTrace" target="_blank" rel="noopener">Source on GitHub</a>
                 &middot; <a href="/docs">API docs</a>
             </p>
-            <p>Demo on synthetic data. Uploaded files are parsed in memory and not stored; the audit log keeps the file name, transaction ID, validation result, risk score and file size.</p>
+            <p>Demo on synthetic data. Uploaded files are parsed in memory and not stored; the audit log keeps the file name, transaction ID, validation result, risk score and file size, and the database keeps a fingerprint and the supplier, amount and issue date.</p>
         </footer>
     </div>
 

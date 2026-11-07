@@ -169,7 +169,7 @@ function renderQueue(data) {
         const title = nothingYet ? 'The review queue is empty'
             : openCleared ? 'Nothing is waiting for review'
                 : 'No reviews match these filters';
-        const text = nothingYet ? 'Files that need a person land here: invoices above the review limit are added automatically, and you can send an invalid invoice from its result.'
+        const text = nothingYet ? 'Files that need a person land here: invoices above the review limit and likely duplicates are added automatically, and you can send an invalid invoice from its result.'
             : openCleared ? 'Every review has been decided. Switch to Approved or Rejected to see them.'
                 : 'Try another state, status or assignee, or clear the search.';
         clear(dom.output).append(el('div', { class: 'empty-state' },
