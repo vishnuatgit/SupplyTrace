@@ -1,10 +1,11 @@
-// Entry point: a small hash router over the five views, the theme toggle, and
-// the wiring between views. Routes look like #/check, #/batch, #/audit,
-// #/rules, #/about. Hashes without the slash (#main) are in-page links.
+// Entry point: a small hash router over the six views, the theme toggle, and
+// the wiring between views. Routes look like #/check, #/batch, #/review,
+// #/audit, #/rules, #/about. Hashes without the slash (#main) are in-page links.
 
 import { initCheck, getSamples, runSampleById, editInSandbox } from './check.js';
 import { initBatch, runSamples, runFiles } from './batch.js';
 import { initAudit, showAudit } from './audit.js';
+import { initReview, showReview, refreshReviewCount } from './review.js';
 import { showReference } from './reference.js';
 import { initOverview, refreshOverview, rememberChecks } from './overview.js';
 import { initPipeline } from './pipeline.js';
@@ -13,6 +14,7 @@ import { initChartTooltips } from './charts.js';
 const ROUTES = {
     check: { title: 'SupplyTrace | Supplier XML invoice validation', onShow: refreshOverview },
     batch: { title: 'Batch check · SupplyTrace' },
+    review: { title: 'Review queue · SupplyTrace', onShow: showReview },
     audit: { title: 'Audit log · SupplyTrace', onShow: showAudit },
     rules: { title: 'Rules and model · SupplyTrace', onShow: showReference },
     about: { title: 'About · SupplyTrace' },
@@ -23,7 +25,7 @@ function parseHash() {
     return { route: name in ROUTES ? name : 'check', params: new URLSearchParams(query) };
 }
 
-function showRoute(route, { userNavigation = false } = {}) {
+function showRoute(route, { userNavigation = false, params = new URLSearchParams() } = {}) {
     document.querySelectorAll('[data-view]').forEach(view => {
         view.hidden = view.dataset.view !== route;
     });
@@ -37,7 +39,7 @@ function showRoute(route, { userNavigation = false } = {}) {
         // Move focus to the new view's heading so screen readers announce it.
         document.querySelector(`#view-${route} .view-title`)?.focus({ preventScroll: true });
     }
-    ROUTES[route].onShow?.();
+    ROUTES[route].onShow?.(params);
 }
 
 function handleRoute({ userNavigation }) {
@@ -45,7 +47,7 @@ function handleRoute({ userNavigation }) {
     const anchor = location.hash && !location.hash.startsWith('#/');
     if (anchor && userNavigation) return;
     const { route, params } = anchor ? { route: 'check', params: new URLSearchParams() } : parseHash();
-    showRoute(route, { userNavigation });
+    showRoute(route, { userNavigation, params });
 
     // Deep links: #/check?sample=bad-amount runs that sample;
     // #/batch?run=samples runs every sample as a batch (once).
@@ -102,6 +104,7 @@ initCheck({
     onChecked: result => {
         rememberChecks([result]);
         refreshOverview();
+        refreshReviewCount();
     },
 });
 initBatch({
@@ -110,9 +113,14 @@ initBatch({
         go('check');
         editInSandbox(text, name, problem);
     },
-    onChecked: rememberChecks,
+    onChecked: results => {
+        rememberChecks(results);
+        refreshReviewCount();
+    },
 });
 initAudit();
+initReview();
+refreshReviewCount();
 
 window.addEventListener('hashchange', () => handleRoute({ userNavigation: true }));
 handleRoute({ userNavigation: false });

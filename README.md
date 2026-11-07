@@ -39,6 +39,7 @@ Every user and system flow is written up, with diagrams, in **[docs/process-flow
 - **Results you can act on.** A verdict banner, a rule-by-rule checklist where clicking a rule jumps to and highlights its line, the XML with syntax colours, line numbers and marked lines, the risk score with a waterfall of what drove it, and a JSON report download.
 - **Malformed XML points at the break.** A file that is not well-formed gets the line, column and reason from the parser. The page marks that line, and Fix in sandbox opens the file with the caret on it, the reason above the editor and the line marked until the next edit.
 - **Batch check.** Up to 20 files of up to 1 MB, streamed back one by one: each file's row fills in as soon as the server has checked it, with a real progress bar. Then summary tiles, a status bar, a risk strip plot, the rules broken, a sortable table, a drawer to drill into any file (previous and next follow the table's sort), and CSV or JSON downloads. A file that cannot be read is listed as `REJECTED` instead of failing the batch, and a batch cut off by the network can be retried as it was.
+- **Review queue.** Invoices above the review limit are queued automatically, and an invalid one can be sent from its result. Assign a reviewer, comment, approve or reject (a comment is required), and see the full append-only history per invoice, next to the rule checklist and risk explanation the check produced. Walkthrough: [docs/walkthroughs/01-review-workflow.md](docs/walkthroughs/01-review-workflow.md); what is planned and what was dropped: [docs/roadmap.md](docs/roadmap.md).
 - **Audit log.** Filter by status and source, search file names and transaction IDs, open and copy the exact JSON line, export what is shown.
 - **Rules and model card.** Each rule with an example that breaks it (the tests run every example through the real pipeline), and a model card whose numbers the server computes at startup.
 - **Dark and light themes**, keyboard access, visible focus, screen-reader announcements, reduced-motion support and no horizontal scrolling down to 360 px.
@@ -85,6 +86,7 @@ flowchart LR
     V --> F[Features<br/>8 validation signals]
     F --> M[Score<br/>Random Forest,<br/>experimental, explained]
     M --> LOG[(Audit log<br/>JSON Lines, rotating)]
+    M --> DB[(SQLite or PostgreSQL<br/>review queue)]
     M -. result with checks, lines, risk, timings .-> U
     LOG -. /api/overview, /api/audit .-> U
 ```
@@ -98,6 +100,7 @@ A single check (`POST /api/analyze`), a batch (`POST /api/analyze/batch`) and a 
 | API | Python 3.11+, FastAPI, Uvicorn |
 | XML | `defusedxml`, Python's `expat` (line numbers) |
 | Data and model | pandas, NumPy, scikit-learn |
+| Storage | SQLAlchemy Core: SQLite by default, PostgreSQL through `DATABASE_URL` |
 | Frontend | HTML, CSS, JavaScript modules, hand-drawn SVG charts; Outfit and JetBrains Mono from Google Fonts |
 | Quality | pytest, pytest-cov, Ruff, GitHub Actions (Python 3.11 and 3.12) |
 | Hosting | Render (Blueprint in `render.yaml`) |
@@ -135,7 +138,9 @@ All settings are optional environment variables. Relative paths are resolved aga
 | `SUPPLYTRACE_AUDIT_DIR` | same as results | Directory for `audit_log.jsonl`. |
 | `SUPPLYTRACE_AUDIT_MAX_BYTES` | `1000000` | Size at which the audit log is rotated to `audit_log.jsonl.1`. |
 | `SUPPLYTRACE_MAX_UPLOAD_BYTES` | `1000000` | Largest accepted file, for single and batch checks. The frontend checks the same 1 MB limit before uploading. |
-| `SUPPLYTRACE_BOOTSTRAP` | `1` | Set to `0` to skip generating the demo dataset on startup. |
+| `SUPPLYTRACE_BOOTSTRAP` | `1` | Set to `0` to skip generating the demo dataset (and the sample reviews) on startup. |
+| `SUPPLYTRACE_DB_PATH` | `data/supplytrace.db` | SQLite file for the review queue. |
+| `DATABASE_URL` | unset | Use another database instead, for example a free PostgreSQL on Neon (also install a driver such as `psycopg2-binary`). On Render's free tier the disk is ephemeral, so with SQLite the reviews reset on every redeploy. |
 
 The dev server (`python -m src.api.server`) listens on `127.0.0.1:8000` with auto-reload; in production run `uvicorn src.api.server:app --host 0.0.0.0 --port <port>`.
 
@@ -147,7 +152,7 @@ python -m pytest                     # unit and integration tests, with coverage
 ruff check . && ruff format --check .
 ```
 
-The suite covers XML parsing and safety (DTDs, entity expansion, depth, size limits, empty files, parse-error positions), every validation rule, the rule checklist and every example on the rules page, line locating, the risk explanation (it must add up to the score), the single, batch and streamed endpoints (including that they agree and report the audit timestamp they wrote), the audit log, its filters and the dashboard overview, the model card's holdout metrics, and the frontend's security headers. The tests use FastAPI's `TestClient` and temporary directories; they need no network and never write to the repository's `data/` or `results/`. CI runs the same commands on every push.
+The suite covers XML parsing and safety (DTDs, entity expansion, depth, size limits, empty files, parse-error positions), every validation rule, the rule checklist and every example on the rules page, line locating, the risk explanation (it must add up to the score), the single, batch and streamed endpoints (including that they agree and report the audit timestamp they wrote), the audit log, its filters and the dashboard overview, the review workflow (state transitions, API and an end-to-end run), the model card's holdout metrics, and the frontend's security headers. The tests use FastAPI's `TestClient` and temporary directories; they need no network and never write to the repository's `data/` or `results/`. CI runs the same commands on every push.
 
 ## Deploy on Render
 

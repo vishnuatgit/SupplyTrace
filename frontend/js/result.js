@@ -10,6 +10,8 @@ import {
 import { renderXml, revealLine } from './xml-view.js';
 import { riskGauge, riskWaterfall } from './charts.js';
 import { pipelineStrip } from './pipeline.js';
+import { postFiles } from './api.js';
+import { getReviewerName } from './reviewer.js';
 
 const OPTIONAL_FIELD_COUNT = 4;
 const REVIEW_LIMIT = 1_000_000;
@@ -62,7 +64,8 @@ function verdict(result, failed) {
 
 // ---------- Rule checklist ----------
 
-function checklist(result) {
+// With interactive false the rows are plain (the review page has no XML to jump into).
+export function checklist(result, { interactive = true } = {}) {
     const checks = result.checks || [];
     const count = state => checks.filter(c => c.state === state).length;
     const broken = count('broken');
@@ -80,7 +83,9 @@ function checklist(result) {
                 el('span', { class: 'check-note', text: check.note })),
         ];
         const stateText = { passed: 'passed', failed: 'failed', review: 'needs review', skipped: 'not checked' }[tone];
-        if (check.line) {
+        if (check.line && !interactive) {
+            content.push(el('span', { class: 'check-line' }, `Line ${check.line}`));
+        } else if (check.line) {
             content.push(el('span', { class: 'check-line' }, `Line ${check.line}`, icon('jump')));
             return el('li', { class: `check check-${tone}` }, el('button', {
                 type: 'button', class: 'check-row', 'data-line': check.line,
@@ -141,7 +146,7 @@ function xmlPanel(name, text, marks, { onEdit, size } = {}) {
 
 // ---------- Risk ----------
 
-function riskBlock(result) {
+export function riskBlock(result) {
     const prediction = result.prediction || {};
     const head = el('div', { class: 'section-head' },
         el('h4', { class: 'sub-label', text: 'Risk score' }),
@@ -165,6 +170,51 @@ function riskBlock(result) {
         el('p', { class: 'risk-note' },
             'A Random Forest trained on 400 synthetic invoices. Each tree\'s path is followed from the base rate to the score, and every split\'s change is credited to its feature. The status above is the decision; this score is advice. ',
             el('a', { href: '#/rules', text: 'Read the model card' })));
+}
+
+// ---------- Review queue ----------
+
+const REVIEW_STATE_TEXT = { open: 'open', approved: 'approved', rejected: 'rejected' };
+
+// Tells the review page (and the count in the menu) that the queue changed.
+export function announceQueueChange() {
+    document.dispatchEvent(new CustomEvent('reviews-changed'));
+}
+
+function queueNote(review, created) {
+    const who = review.assignee ? `, assigned to ${review.assignee}` : ', not assigned yet';
+    const lead = created ? 'Sent to the review queue' : 'In the review queue';
+    return el('div', { class: 'review-note' },
+        icon('flag'),
+        el('span', {}, `${lead} as #${review.id} (${REVIEW_STATE_TEXT[review.state]}${review.state === 'open' ? who : ''}). `,
+            el('a', { href: `#/review?id=${review.id}`, text: 'Open the review' })));
+}
+
+// A REQUIRES_REVIEW file is queued by the server and shows where it is; an
+// INVALID one gets a button to send it, since a person may not need to see it.
+function reviewSection(result, text) {
+    if (result.review) return queueNote(result.review, false);
+    if (result.status !== 'INVALID' || !text) return null;
+
+    const box = el('div', { class: 'review-note' });
+    const send = el('button', { type: 'button', class: 'btn btn-secondary btn-sm' }, icon('flag'), 'Send to review');
+    send.addEventListener('click', async () => {
+        send.disabled = true;
+        try {
+            const file = new File([text], result.filename, { type: 'text/xml' });
+            const form = await postFiles('/api/reviews', 'file', [file], { actor: getReviewerName() || 'anonymous' });
+            clear(box).append(queueNote(form.review, form.created));
+            announceQueueChange();
+            toast(form.created ? 'Sent to the review queue.' : 'This file is already in the review queue.', { kind: 'info' });
+        } catch (error) {
+            send.disabled = false;
+            toast(error.message, { kind: 'error' });
+        }
+    });
+    box.append(icon('info'),
+        el('span', { text: 'Invalid files are not queued automatically. Send it to a reviewer if someone should follow it up with the supplier.' }),
+        send);
+    return box;
 }
 
 // ---------- Details and actions ----------
@@ -215,6 +265,7 @@ export function renderResult(container, result, text, { onEdit, onAnother, pipel
         pipeline ? pipelineStrip(pipeline === 'live' ? { live: true } : { result }) : null,
         verdict(result, failed),
         el('p', { class: 'result-summary', text: summaryFor(result, failed) }),
+        reviewSection(result, text),
         logged,
         checklist(result),
         panel,

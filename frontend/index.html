@@ -25,6 +25,8 @@
         <symbol id="i-server" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></symbol>
         <symbol id="i-octagon" viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
         <symbol id="i-triangle" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+        <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
         <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
         <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
         <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
@@ -84,6 +86,7 @@
             <nav class="main-nav" aria-label="Main">
                 <a href="#/check" data-route="check"><svg class="icon" aria-hidden="true"><use href="#i-check-square"/></svg>Check</a>
                 <a href="#/batch" data-route="batch"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>Batch</a>
+                <a href="#/review" data-route="review"><svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg>Review<span class="nav-count is-empty" id="review-nav-count"></span></a>
                 <a href="#/audit" data-route="audit"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg>Audit log</a>
                 <a href="#/rules" data-route="rules"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>Rules &amp; model</a>
                 <a href="#/about" data-route="about"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>About</a>
@@ -356,6 +359,60 @@
                         <p>Run the sample invoices or choose your own files. You get counts by status, a risk chart, a sortable table you can drill into, and CSV or JSON downloads.</p>
                     </div>
                 </div>
+            </section>
+
+            <!-- ============ Review queue ============ -->
+            <section class="view" id="view-review" data-view="review" aria-labelledby="review-title" hidden>
+                <div class="view-head">
+                    <h1 id="review-title" class="view-title" tabindex="-1">Review queue</h1>
+                    <p class="view-lede">Invoices that need a person: files above the review limit are queued automatically, and you can send an invalid file from its result. Assign a reviewer, comment, then approve or reject; every step is kept in the invoice's history. There is no sign-in in the demo, so enter a name to sign your actions.</p>
+                    <label class="name-field">
+                        <span class="field-label">Your name</span>
+                        <input type="text" id="review-name" class="text-input" maxlength="60" placeholder="e.g. Asha" autocomplete="nickname">
+                    </label>
+                </div>
+
+                <div id="review-list">
+                    <section class="glass-panel review-panel" aria-label="Review queue">
+                        <div class="audit-toolbar">
+                            <div class="segmented" id="review-filter" role="radiogroup" aria-label="Review state">
+                                <label><input type="radio" name="review-state" value="open" checked><span>Open</span><span class="count" data-count="open"></span></label>
+                                <label><input type="radio" name="review-state" value="approved"><span>Approved</span><span class="count" data-count="approved"></span></label>
+                                <label><input type="radio" name="review-state" value="rejected"><span>Rejected</span><span class="count" data-count="rejected"></span></label>
+                                <label><input type="radio" name="review-state" value=""><span>All</span><span class="count" data-count="all"></span></label>
+                            </div>
+                            <div class="audit-tools">
+                                <label class="select-wrap">
+                                    <span class="visually-hidden">Invoice status</span>
+                                    <select id="review-status">
+                                        <option value="">Any status</option>
+                                        <option value="REQUIRES_REVIEW">Needs review</option>
+                                        <option value="INVALID">Invalid</option>
+                                    </select>
+                                    <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+                                </label>
+                                <label class="select-wrap">
+                                    <span class="visually-hidden">Assigned to</span>
+                                    <select id="review-assignee"><option value="">Anyone</option><option value="unassigned">Unassigned</option></select>
+                                    <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+                                </label>
+                                <label class="search">
+                                    <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+                                    <span class="visually-hidden">Search file names and transaction IDs</span>
+                                    <input type="search" id="review-search" placeholder="Search file or ID" maxlength="200" autocomplete="off">
+                                </label>
+                                <button type="button" class="btn btn-secondary" id="review-refresh"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>Refresh</button>
+                            </div>
+                        </div>
+                        <div id="review-output" class="review-output">
+                            <div class="skeleton skeleton-row"></div>
+                            <div class="skeleton skeleton-row"></div>
+                            <div class="skeleton skeleton-row"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="review-detail" hidden></div>
             </section>
 
             <!-- ============ Audit log ============ -->

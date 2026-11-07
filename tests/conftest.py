@@ -17,3 +17,12 @@ def synthetic_batch(tmp_path_factory):
     df = PipelineOrchestrator(raw_dir, results_csv).run()
     outcomes = pd.read_csv(os.path.join(raw_dir, OUTCOMES_FILE))
     return {"raw_dir": raw_dir, "results_csv": results_csv, "df": df, "outcomes": outcomes}
+
+
+@pytest.fixture(autouse=True)
+def temp_database(tmp_path, monkeypatch):
+    """Every test gets its own empty database file, so none touches the repository's data/."""
+    from src.api import server
+
+    monkeypatch.setattr(server, "DATABASE_URL", None)
+    monkeypatch.setattr(server, "DB_PATH", str(tmp_path / "db" / "supplytrace.db"))

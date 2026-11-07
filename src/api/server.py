@@ -1,17 +1,19 @@
+import hashlib
 import json
 import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 import pandas as pd
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, StringConstraints
 from starlette.concurrency import run_in_threadpool
 
 from src.api.analysis import (
@@ -28,6 +30,15 @@ from src.ingestion.parser import AMOUNT_TAGS, ID_TAGS, MAX_GENERIC_ID_DEPTH
 from src.pipeline.bootstrap import ensure_demo_results
 from src.prediction.model import RiskPredictor
 from src.prediction.model_card import build_model_card
+from src.reviews.demo import seed_review_queue
+from src.reviews.store import (
+    ANONYMOUS,
+    QUEUEABLE,
+    ReviewNotFound,
+    ReviewStateError,
+    ReviewStore,
+)
+from src.storage.database import DEFAULT_DB_PATH, create_database
 from src.utils.audit import DEFAULT_MAX_BYTES, append_audit_entries, read_audit_entries
 from src.validation.rules import REVIEW_THRESHOLD, RULES, Status
 
@@ -43,6 +54,10 @@ AUDIT_MAX_BYTES = int(os.environ.get("SUPPLYTRACE_AUDIT_MAX_BYTES", DEFAULT_MAX_
 MAX_UPLOAD_BYTES = int(os.environ.get("SUPPLYTRACE_MAX_UPLOAD_BYTES", 1_000_000))
 # Generate the synthetic dataset on startup when batch results are missing.
 BOOTSTRAP_DEMO_DATA = os.environ.get("SUPPLYTRACE_BOOTSTRAP", "1") != "0"
+# Review history lives in SQLite at DB_PATH unless DATABASE_URL names another
+# database (for example a free PostgreSQL on Neon).
+DATABASE_URL = os.environ.get("DATABASE_URL")
+DB_PATH = os.environ.get("SUPPLYTRACE_DB_PATH", DEFAULT_DB_PATH)
 
 # A batch check takes up to this many files, each up to MAX_UPLOAD_BYTES.
 MAX_BATCH_FILES = 20
@@ -118,6 +133,10 @@ TAGS = [
     {"name": "analysis", "description": "Check XML invoices: one file, or a batch of up to 20."},
     {"name": "dashboard", "description": "Totals and history for the web dashboard."},
     {"name": "audit", "description": "The JSON Lines audit log: one entry per checked file."},
+    {
+        "name": "reviews",
+        "description": "The review queue: assign, comment, approve or reject, with full history.",
+    },
     {"name": "reference", "description": "The validation rules and the risk model card."},
     {"name": "samples", "description": "Synthetic sample invoices for the demo."},
     {"name": "health", "description": "Liveness check for the hosting platform."},
@@ -160,11 +179,16 @@ def train_from_results(predictor: RiskPredictor, csv_path: str) -> pd.DataFrame 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.predictor = RiskPredictor()
+    engine = create_database(DATABASE_URL, DB_PATH)
+    app.state.reviews = ReviewStore(engine)
     if BOOTSTRAP_DEMO_DATA:
         ensure_demo_results(DATA_DIR, results_csv_path(), audit_log_path())
     results = train_from_results(app.state.predictor, results_csv_path())
+    if BOOTSTRAP_DEMO_DATA:
+        seed_review_queue(app.state.reviews, SAMPLES, SAMPLES_DIR, app.state.predictor)
     app.state.model_card = build_model_card(app.state.predictor, results)
     yield
+    engine.dispose()
 
 
 app = FastAPI(
@@ -184,7 +208,7 @@ app = FastAPI(
 async def upload_validation_handler(request: Request, exc: RequestValidationError):
     """No usable file in an upload (missing, or sent without a filename): the app's own message, still a 422."""
     upload_fields = {("body", "file"), ("body", "files")}
-    if request.url.path.startswith("/api/analyze") and any(
+    if request.url.path.startswith(("/api/analyze", "/api/reviews")) and any(
         tuple(err.get("loc", ()))[:2] in upload_fields for err in exc.errors()
     ):
         return JSONResponse(
@@ -199,7 +223,7 @@ async def upload_validation_handler(request: Request, exc: RequestValidationErro
 app.add_middleware(
     UploadSizeLimitMiddleware,
     max_bytes=MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES,
-    paths=("/api/analyze",),
+    paths=("/api/analyze", "/api/reviews"),
     detail=TOO_LARGE_DETAIL,
 )
 app.add_middleware(
@@ -229,8 +253,8 @@ async def analyze_xml(request: Request, file: UploadFile = File(...)):
     except AnalysisError as e:
         return JSONResponse(e.to_json(), status_code=e.status_code)
 
-    # Write to the audit log (best effort: never fails the request)
-    return log_result(result, origin="web")
+    # Write to the audit log and queue it for review if needed (best effort: never fails the request)
+    return await run_in_threadpool(record_result, result, content, "web", request.app.state)
 
 
 async def read_batch(files: list[UploadFile]) -> list[tuple[str | None, bytes]]:
@@ -240,14 +264,14 @@ async def read_batch(files: list[UploadFile]) -> list[tuple[str | None, bytes]]:
     return [(upload.filename, await upload.read(MAX_UPLOAD_BYTES + 1)) for upload in files]
 
 
-async def check_batch_file(filename: str | None, content: bytes, predictor) -> dict:
+async def check_batch_file(filename: str | None, content: bytes, state) -> dict:
     """One batch file through the single-file pipeline; a file that can't be read is REJECTED."""
     try:
         check_upload(filename, content, MAX_UPLOAD_BYTES)
-        result = await run_in_threadpool(analyze_document, filename, content, predictor)
+        result = await run_in_threadpool(analyze_document, filename, content, state.predictor)
     except AnalysisError as e:
         return rejected_result(filename, e)
-    return log_result(result, origin="web-batch")
+    return await run_in_threadpool(record_result, result, content, "web-batch", state)
 
 
 def summarize(results: list[dict]) -> dict:
@@ -262,8 +286,8 @@ async def analyze_batch(request: Request, files: list[UploadFile] = File(...)):
     A file that cannot be read gets status REJECTED instead of failing the batch.
     """
     uploads = await read_batch(files)
-    predictor = request.app.state.predictor
-    results = [await check_batch_file(name, content, predictor) for name, content in uploads]
+    state = request.app.state
+    results = [await check_batch_file(name, content, state) for name, content in uploads]
     return {"count": len(results), "summary": summarize(results), "results": results}
 
 
@@ -281,19 +305,64 @@ async def analyze_batch_stream(request: Request, files: list[UploadFile] = File(
     real progress.
     """
     uploads = await read_batch(files)
-    predictor = request.app.state.predictor
+    state = request.app.state
 
     async def lines():
         yield json.dumps({"type": "start", "count": len(uploads)}) + "\n"
         results = []
         for index, (name, content) in enumerate(uploads):
-            result = await check_batch_file(name, content, predictor)
+            result = await check_batch_file(name, content, state)
             results.append(result)
             yield json.dumps({"type": "result", "index": index, "result": result}) + "\n"
         summary = {"type": "summary", "count": len(results), "summary": summarize(results)}
         yield json.dumps(summary) + "\n"
 
     return StreamingResponse(lines(), media_type="application/x-ndjson")
+
+
+def content_hash(content: bytes) -> str:
+    """The file's fingerprint: SHA-256 of its exact bytes."""
+    return hashlib.sha256(content).hexdigest()
+
+
+def record_result(result: dict, content: bytes, origin: str, state) -> dict:
+    """
+    What happens to every accepted file after it is analysed: it is written to the
+    audit log, and a REQUIRES_REVIEW file is put in the review queue. `review` on
+    the result says where it is in the queue (None when it is not queued).
+    """
+    log_result(result, origin)
+    result["review"] = None
+    if result["status"] == "REQUIRES_REVIEW":
+        reason = "Rules: " + "; ".join(result["errors"] or ["amount above the review limit"])
+        result["review"] = queue_for_review(state.reviews, result, content, reason)
+    elif result["status"] == "INVALID":
+        # Not queued automatically, but show it if someone already sent this file.
+        result["review"] = find_review(state.reviews, content)
+    return result
+
+
+def find_review(store: ReviewStore, content: bytes):
+    """The id, state and assignee of this file's review, or None (also None if the lookup fails)."""
+    try:
+        review = store.find(content_hash(content))
+    except Exception as e:
+        logger.error(f"Could not look up the review: {e}")
+        return None
+    return {key: review[key] for key in ("id", "state", "assignee")} if review else None
+
+
+def queue_for_review(store: ReviewStore, result: dict, content: bytes, reason: str):
+    """
+    Queues the file (best effort: a database problem is logged, never raised, so
+    the check itself still works). Returns the review's id, state and assignee.
+    """
+    try:
+        review, _created = store.queue(result, content_hash(content), reason)
+    except Exception as e:
+        logger.error(f"Could not queue {result['filename']} for review: {e}")
+        return None
+    return {key: review[key] for key in ("id", "state", "assignee")}
 
 
 def log_result(result: dict, origin: str) -> dict:
@@ -389,6 +458,114 @@ def get_overview(recent: int = Query(15, ge=1, le=50)):
     """
     entries = [entry for entry, _line in read_audit_entries(audit_log_path())]
     return build_overview(entries, recent)
+
+
+# ---------- Review queue ----------
+
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
+Comment = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
+
+
+class AssignBody(BaseModel):
+    reviewer: Name
+    actor: Name
+
+
+class ActionBody(BaseModel):
+    actor: Name
+    comment: Comment
+
+
+def review_call(action, *args):
+    """Runs a store action, turning its errors into 404 (unknown id) and 409 (wrong state)."""
+    try:
+        return action(*args)
+    except ReviewNotFound:
+        raise HTTPException(status_code=404, detail="No such review") from None
+    except ReviewStateError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+
+
+@app.get("/api/reviews", tags=["reviews"])
+def list_reviews(
+    request: Request,
+    state: Literal["open", "approved", "rejected"] | None = None,
+    status: Literal["INVALID", "REQUIRES_REVIEW"] | None = None,
+    assignee: str | None = Query(None, max_length=60, description='A name, or "unassigned"'),
+    q: str | None = Query(None, max_length=200, description="Search file names and IDs"),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """
+    The review queue, newest first, filtered by state, invoice status, assignee and
+    a search over file names and transaction IDs. `counts` gives the number per
+    state after the other filters.
+    """
+    return request.app.state.reviews.list(state, assignee, status, (q or "").strip(), limit)
+
+
+@app.get("/api/reviews/{review_id}", tags=["reviews"])
+def get_review(request: Request, review_id: int):
+    """One review: the invoice's analysis (rule checklist, risk drivers) and its full history."""
+    return review_call(request.app.state.reviews.get, review_id)
+
+
+@app.post("/api/reviews", tags=["reviews"], responses=ERROR_RESPONSES)
+async def send_to_review(
+    request: Request,
+    file: UploadFile = File(...),
+    actor: str = Form(ANONYMOUS, max_length=60),
+):
+    """
+    Sends an INVALID (or REQUIRES_REVIEW) invoice to the review queue. The file is
+    analysed again here, so the queue never holds a result the client made up.
+    `created` is false when the same file is already in the queue.
+    """
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    try:
+        check_upload(file.filename, content, MAX_UPLOAD_BYTES)
+        result = await run_in_threadpool(
+            analyze_document, file.filename, content, request.app.state.predictor
+        )
+    except AnalysisError as e:
+        return JSONResponse(e.to_json(), status_code=e.status_code)
+    if result["status"] not in QUEUEABLE:
+        raise HTTPException(
+            status_code=400,
+            detail="Only invoices that fail a rule or need review can be sent to review",
+        )
+    reason = "Sent to review: " + "; ".join(result["errors"] or ["needs review"])
+    review, created = await run_in_threadpool(
+        request.app.state.reviews.queue,
+        result,
+        content_hash(content),
+        reason,
+        actor.strip() or ANONYMOUS,
+    )
+    return {"created": created, "review": {k: review[k] for k in ("id", "state", "assignee")}}
+
+
+@app.post("/api/reviews/{review_id}/assign", tags=["reviews"])
+def assign_review(request: Request, review_id: int, body: AssignBody):
+    """Assigns an open review to a reviewer (a name). 409 when it is already closed."""
+    return review_call(request.app.state.reviews.assign, review_id, body.reviewer, body.actor)
+
+
+@app.post("/api/reviews/{review_id}/comments", tags=["reviews"])
+def comment_on_review(request: Request, review_id: int, body: ActionBody):
+    """Adds a comment to the history (any state). The comment cannot be blank."""
+    return review_call(request.app.state.reviews.comment, review_id, body.actor, body.comment)
+
+
+@app.post("/api/reviews/{review_id}/approve", tags=["reviews"])
+def approve_review(request: Request, review_id: int, body: ActionBody):
+    """Approves an open review. A comment is required; 409 when it is already decided."""
+    return review_call(request.app.state.reviews.approve, review_id, body.actor, body.comment)
+
+
+@app.post("/api/reviews/{review_id}/reject", tags=["reviews"])
+def reject_review(request: Request, review_id: int, body: ActionBody):
+    """Rejects an open review. A comment is required; 409 when it is already decided."""
+    return review_call(request.app.state.reviews.reject, review_id, body.actor, body.comment)
 
 
 @app.get("/api/rules", tags=["reference"])
