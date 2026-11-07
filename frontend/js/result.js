@@ -4,7 +4,7 @@
 // the details, and the actions.
 
 import {
-    el, clear, icon, STATUS, formatBytes, formatMs, formatNumber, formatPercent, plural,
+    el, clear, icon, STATUS, formatRelative, formatBytes, formatMs, formatNumber, formatPercent, plural,
     copyText, downloadFile, fileStamp, toast, announce,
 } from './ui.js';
 import { renderXml, revealLine } from './xml-view.js';
@@ -172,6 +172,28 @@ export function riskBlock(result) {
             el('a', { href: '#/rules', text: 'Read the model card' })));
 }
 
+// ---------- Duplicates ----------
+
+// What was found when this invoice was compared with the ones checked before it,
+// with the reason and where to find the earlier one. Null for a first-time invoice.
+export function duplicateNote(duplicate) {
+    if (!duplicate) return null;
+    const earlier = duplicate.of;
+    const links = [];
+    if (earlier.review_id) links.push(el('a', { href: `#/review?id=${earlier.review_id}`, text: `Open its review (#${earlier.review_id})` }));
+    links.push(el('a', { href: `#/audit?q=${encodeURIComponent(earlier.filename)}`, text: 'Find it in the audit log' }));
+    return el('div', { class: `duplicate-note duplicate-${duplicate.kind}` },
+        icon('copy'),
+        el('div', {},
+            el('p', {},
+                el('strong', { text: duplicate.kind === 'exact' ? 'Exact duplicate' : 'Likely duplicate' }),
+                ` of invoice #${earlier.id}, `, el('span', { class: 'mono', text: earlier.filename }),
+                earlier.invoice_id ? [' (ID ', el('span', { class: 'mono', text: earlier.invoice_id }), ')'] : null,
+                `, first checked ${formatRelative(earlier.seen_at)}.`),
+            el('p', { class: 'muted', text: duplicate.reason }),
+            el('p', { class: 'duplicate-links' }, links)));
+}
+
 // ---------- Review queue ----------
 
 const REVIEW_STATE_TEXT = { open: 'open', approved: 'approved', rejected: 'rejected' };
@@ -265,6 +287,7 @@ export function renderResult(container, result, text, { onEdit, onAnother, pipel
         pipeline ? pipelineStrip(pipeline === 'live' ? { live: true } : { result }) : null,
         verdict(result, failed),
         el('p', { class: 'result-summary', text: summaryFor(result, failed) }),
+        duplicateNote(result.duplicate),
         reviewSection(result, text),
         logged,
         checklist(result),

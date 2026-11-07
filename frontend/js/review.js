@@ -4,10 +4,10 @@
 
 import { getJson, postJson } from './api.js';
 import {
-    el, clear, icon, badge, flagBadge, formatDateTime, formatRelative, formatNumber, formatPercent,
+    el, clear, icon, badge, flagBadge, duplicateTag, formatDateTime, formatRelative, formatNumber, formatPercent,
     announce, toast,
 } from './ui.js';
-import { checklist, riskBlock } from './result.js';
+import { checklist, riskBlock, duplicateNote } from './result.js';
 import { getReviewerName, setReviewerName } from './reviewer.js';
 
 const SEARCH_DELAY_MS = 250;
@@ -199,7 +199,7 @@ function renderQueue(data) {
             el('td', { 'data-label': 'Invoice' },
                 el('a', { class: 'mono file-cell review-link', href: `#/review?id=${review.id}`, text: review.filename }),
                 el('span', { class: 'cell-sub' }, review.invoice_id ? el('span', { class: 'mono', text: review.invoice_id }) : el('span', { text: 'No transaction ID' }))),
-            el('td', { 'data-label': 'Status' }, badge(review.validation_status)),
+            el('td', { 'data-label': 'Status' }, badge(review.validation_status), duplicateTag(review.duplicate)),
             el('td', { class: 'num mono', 'data-label': 'Amount', text: review.amount || '–' }),
             el('td', { class: 'num', 'data-label': 'Risk' }, riskCell(review)),
             el('td', { 'data-label': 'Review' }, stateBadge(review.state)),
@@ -250,6 +250,7 @@ function renderDetail(review) {
             el('h2', { class: 'review-title' }, el('span', { class: 'cell-muted', text: `#${review.id}` }), el('span', { class: 'mono', text: review.filename })),
             el('div', { class: 'badge-group' }, badge(review.validation_status), stateBadge(review.state))),
         el('p', { class: 'review-reason', text: review.reason }),
+        duplicateNote(result.duplicate),
         el('div', { class: 'metrics-subgrid' },
             metaItem('Transaction ID', review.invoice_id ? el('span', { class: 'mono', text: review.invoice_id }) : el('span', { class: 'muted', text: 'not found' })),
             metaItem('Amount', review.amount ? el('span', { class: 'mono', text: review.amount }) : el('span', { class: 'muted', text: 'not found' })),

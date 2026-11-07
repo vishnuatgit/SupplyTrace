@@ -55,9 +55,10 @@ def test_new_review_is_open_with_a_created_event(store):
     assert review["history"][0]["actor"] == "system"
 
 
-def test_valid_invoice_cannot_be_queued(store):
-    with pytest.raises(ValueError):
-        store.queue(fake_result("VALID"), "h", "why")
+def test_a_valid_invoice_can_be_queued_when_the_server_flags_it(store):
+    # A VALID invoice only reaches the queue as a likely duplicate (see server.record_result).
+    review_id = queued(store, "VALID")
+    assert store.get(review_id)["validation_status"] == "VALID"
 
 
 def test_same_file_is_queued_only_once(store):

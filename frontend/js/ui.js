@@ -72,6 +72,13 @@ export function badge(status, { large = false } = {}) {
         icon(STATUS[known].icon), STATUS[known].text);
 }
 
+// A small tag for an invoice flagged as a duplicate: kind is 'exact' or 'likely'.
+export function duplicateTag(kind) {
+    if (!kind) return null;
+    return el('span', { class: `badge dup-tag dup-${kind}`, title: kind === 'exact' ? 'The same file was checked before' : 'Probably the same invoice as an earlier one' },
+        icon('copy'), kind === 'exact' ? 'Duplicate' : 'Likely duplicate');
+}
+
 export function flagBadge(prediction) {
     const score = prediction?.risk_score;
     if (typeof score !== 'number') return el('span', { class: 'badge flag-NA', text: 'No score' });

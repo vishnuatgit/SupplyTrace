@@ -83,7 +83,7 @@ def test_all_samples_as_one_batch(demo_client):
         for s in demo_client.get("/api/samples").json()
     ]
     body = demo_client.post("/api/analyze/batch", files=files).json()
-    assert body["summary"] == {"VALID": 2, "INVALID": 4, "REQUIRES_REVIEW": 1, "REJECTED": 0}
+    assert body["summary"] == {"VALID": 3, "INVALID": 4, "REQUIRES_REVIEW": 1, "REJECTED": 0}
 
 
 def test_every_sample_gets_its_expected_status(demo_client):

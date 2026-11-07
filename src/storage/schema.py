@@ -45,3 +45,28 @@ review_events = Table(
     ),  # created, assigned, commented, approved, rejected
     Column("comment", Text, nullable=False, default=""),
 )
+
+# One row per analysed invoice (every accepted check), with the fingerprint and
+# key fields that duplicate detection compares, and the duplicate flag it got.
+invoices = Table(
+    "invoices",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("content_hash", String(64), nullable=False, index=True),  # SHA-256 of the file
+    Column("filename", String(255), nullable=False),
+    Column("invoice_id", String(255), nullable=False, default=""),  # the transaction ID
+    Column("vendor_key", String(255), nullable=False, default="", index=True),
+    Column("supplier_id", String(255), nullable=False, default=""),
+    Column("supplier_name", String(255), nullable=False, default=""),
+    Column("amount", Float),  # None unless the amount is a valid number
+    Column("amount_text", String(64), nullable=False, default=""),
+    Column("currency", String(16), nullable=False, default=""),
+    Column("issue_date", String(10), nullable=False, default=""),  # YYYY-MM-DD, or empty
+    Column("validation_status", String(20), nullable=False),
+    Column("risk_score", Float),
+    Column("origin", String(12), nullable=False),  # web, web-batch or demo
+    Column("seen_at", String(32), nullable=False),
+    Column("duplicate_kind", String(10)),  # exact, likely or None
+    Column("duplicate_of", Integer),  # the earlier invoice's id
+    Column("duplicate_reason", Text),
+)

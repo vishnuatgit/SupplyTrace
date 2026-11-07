@@ -16,6 +16,7 @@ from src.features.extractor import FEATURE_LABELS, FeatureExtractor
 from src.ingestion.locator import XMLIndex, index_elements
 from src.ingestion.parser import AMOUNT_TAGS, ID_TAGS, MAX_GENERIC_ID_DEPTH, XMLParser
 from src.ingestion.xml_loader import XMLLoader, XMLLoadError
+from src.invoices.fields import key_fields
 from src.prediction.model import RiskPredictor
 from src.validation.rules import (
     AMOUNT_ABOVE_REVIEW_LIMIT,
@@ -141,6 +142,7 @@ def analyze_document(filename: str, content: bytes, predictor: RiskPredictor) ->
         "findings": findings,
         "checks": checks,
         "fields": fields,
+        "key_fields": key_fields(standardized),
         "features": features,
         "prediction": prediction,
         "risk_drivers": drivers,
@@ -160,6 +162,7 @@ def rejected_result(filename: str | None, error: AnalysisError) -> dict:
         "findings": [],
         "checks": [],
         "fields": None,
+        "key_fields": None,
         "features": None,
         "prediction": dict(NO_PREDICTION),
         "risk_drivers": None,
