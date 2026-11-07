@@ -5,7 +5,18 @@ Timestamps are stored as ISO 8601 UTC text. That sorts correctly as text and
 behaves the same on SQLite and PostgreSQL.
 """
 
-from sqlalchemy import Column, Float, ForeignKey, Index, Integer, MetaData, String, Table, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    Text,
+)
 
 metadata = MetaData()
 
@@ -69,4 +80,16 @@ invoices = Table(
     Column("duplicate_kind", String(10)),  # exact, likely or None
     Column("duplicate_of", Integer),  # the earlier invoice's id
     Column("duplicate_reason", Text),
+)
+
+# What people have added to a vendor. A row exists only once someone edits the
+# vendor: the vendors themselves (and their statistics) come from `invoices`.
+vendor_profiles = Table(
+    "vendor_profiles",
+    metadata,
+    Column("vendor_key", String(255), primary_key=True),
+    Column("notes", Text, nullable=False, default=""),
+    Column("trusted", Boolean, nullable=False, default=False),
+    Column("updated_at", String(32), nullable=False),
+    Column("updated_by", String(60), nullable=False),
 )

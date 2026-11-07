@@ -172,6 +172,17 @@ export function riskBlock(result) {
             el('a', { href: '#/rules', text: 'Read the model card' })));
 }
 
+// ---------- Vendor ----------
+
+// The supplier the invoice belongs to, with a link to its page. The trusted tag is
+// information for people: it plays no part in the result above it.
+function vendorLine(vendor) {
+    if (!vendor) return null;
+    return el('p', { class: 'vendor-line' }, icon('user'),
+        el('span', {}, 'Supplier ', el('strong', { text: vendor.name }), vendor.trusted ? el('span', { class: 'badge trusted-tag', title: 'Marked as trusted by a person. It does not change validation.' }, icon('shield'), 'Trusted') : null),
+        el('a', { href: `#/vendors?id=${vendor.id}`, text: 'Open the vendor' }));
+}
+
 // ---------- Duplicates ----------
 
 // What was found when this invoice was compared with the ones checked before it,
@@ -287,6 +298,7 @@ export function renderResult(container, result, text, { onEdit, onAnother, pipel
         pipeline ? pipelineStrip(pipeline === 'live' ? { live: true } : { result }) : null,
         verdict(result, failed),
         el('p', { class: 'result-summary', text: summaryFor(result, failed) }),
+        vendorLine(result.vendor),
         duplicateNote(result.duplicate),
         reviewSection(result, text),
         logged,

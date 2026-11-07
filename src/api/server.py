@@ -42,6 +42,7 @@ from src.storage.database import DEFAULT_DB_PATH, create_database
 from src.storage.demo import seed_demo_data
 from src.utils.audit import DEFAULT_MAX_BYTES, append_audit_entries, read_audit_entries
 from src.validation.rules import REVIEW_THRESHOLD, RULES, Status
+from src.vendors.store import SORTS, VendorNotFound, VendorStore
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -136,13 +137,17 @@ SAMPLES = [
 
 # Statuses and origins an audit entry can have (rejected files are not logged).
 AuditStatus = Literal["VALID", "INVALID", "REQUIRES_REVIEW"]
-AuditOrigin = Literal["web", "web-batch", "pipeline"]
+AuditOrigin = Literal["web", "web-batch", "pipeline", "vendor"]
 MAX_AUDIT_PAGE = 500
 
 TAGS = [
     {"name": "analysis", "description": "Check XML invoices: one file, or a batch of up to 20."},
     {"name": "dashboard", "description": "Totals and history for the web dashboard."},
     {"name": "audit", "description": "The JSON Lines audit log: one entry per checked file."},
+    {
+        "name": "vendors",
+        "description": "Suppliers seen in analysed invoices, with statistics and notes.",
+    },
     {
         "name": "reviews",
         "description": "The review queue: assign, comment, approve or reject, with full history.",
@@ -192,12 +197,18 @@ async def lifespan(app: FastAPI):
     engine = create_database(DATABASE_URL, DB_PATH)
     app.state.reviews = ReviewStore(engine)
     app.state.invoices = InvoiceStore(engine)
+    app.state.vendors = VendorStore(engine)
     if BOOTSTRAP_DEMO_DATA:
         ensure_demo_results(DATA_DIR, results_csv_path(), audit_log_path())
     results = train_from_results(app.state.predictor, results_csv_path())
     if BOOTSTRAP_DEMO_DATA:
         seed_demo_data(
-            app.state.reviews, app.state.invoices, SAMPLES, SAMPLES_DIR, app.state.predictor
+            app.state.reviews,
+            app.state.invoices,
+            SAMPLES,
+            SAMPLES_DIR,
+            app.state.predictor,
+            (DATA_DIR, results_csv_path()),
         )
     app.state.model_card = build_model_card(app.state.predictor, results)
     yield
@@ -347,6 +358,7 @@ def record_result(result: dict, content: bytes, origin: str, state) -> dict:
     result["fingerprint"] = content_hash(content)
     result["duplicate"] = record_invoice(state.invoices, result, result["fingerprint"], origin)
     log_result(result, origin)
+    result["vendor"] = find_vendor(state.vendors, result)
 
     # Why a person should look at it (if at all): the rules, or a likely duplicate.
     reasons = []
@@ -363,6 +375,15 @@ def record_result(result: dict, content: bytes, origin: str, state) -> dict:
         # Not queued, but show where it is if someone already sent this file.
         result["review"] = find_review(state.reviews, content)
     return result
+
+
+def find_vendor(store: VendorStore, result: dict):
+    """The vendor the invoice belongs to ({id, name, trusted}), or None. Display only."""
+    try:
+        return store.summary(result["key_fields"]["vendor_key"])
+    except Exception as e:
+        logger.error(f"Could not look up the vendor: {e}")
+        return None
 
 
 def record_invoice(store: InvoiceStore, result: dict, fingerprint: str, origin: str):
@@ -493,7 +514,8 @@ def get_overview(recent: int = Query(15, ge=1, le=50)):
     valid share, invalid rate, average risk, a 10-bin risk histogram split by
     flag, the most common reasons and the newest `recent` entries.
     """
-    entries = [entry for entry, _line in read_audit_entries(audit_log_path())]
+    # Vendor edits are in the log too, but they are not checked files.
+    entries = [e for e, _line in read_audit_entries(audit_log_path()) if "event" not in e]
     return build_overview(entries, recent)
 
 
@@ -606,6 +628,99 @@ def approve_review(request: Request, review_id: int, body: ActionBody):
 def reject_review(request: Request, review_id: int, body: ActionBody):
     """Rejects an open review. A comment is required; 409 when it is already decided."""
     return review_call(request.app.state.reviews.reject, review_id, body.actor, body.comment)
+
+
+# ---------- Vendor directory ----------
+
+
+class VendorBody(BaseModel):
+    actor: Name
+    notes: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = None
+    trusted: bool | None = None
+
+
+def vendor_call(action, *args):
+    """Runs a vendor store call, turning an unknown vendor into a 404."""
+    try:
+        return action(*args)
+    except VendorNotFound:
+        raise HTTPException(status_code=404, detail="No such vendor") from None
+
+
+@app.get("/api/vendors", tags=["vendors"])
+def list_vendors(
+    request: Request,
+    q: str | None = Query(None, max_length=200, description="Search vendor names and IDs"),
+    trusted: bool | None = None,
+    sort: Literal[SORTS] = "name",
+):
+    """
+    Every vendor seen in the analysed invoices: invoice count, status breakdown, total and
+    average amount, duplicates flagged, average risk score and when it was last seen, plus
+    its notes and trusted flag. Sorted by name, or by a statistic (largest first).
+    """
+    return request.app.state.vendors.list((q or "").strip(), trusted, sort)
+
+
+@app.get("/api/vendors/{vendor_id}", tags=["vendors"])
+def get_vendor(request: Request, vendor_id: str):
+    """One vendor with its statistics, notes and trusted flag."""
+    return vendor_call(request.app.state.vendors.get, vendor_id)
+
+
+@app.get("/api/vendors/{vendor_id}/invoices", tags=["vendors"])
+def get_vendor_invoices(
+    request: Request,
+    vendor_id: str,
+    status: Literal["VALID", "INVALID", "REQUIRES_REVIEW"] | None = None,
+    duplicates: bool = Query(False, description="Only invoices flagged as duplicates"),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """The vendor's invoices, newest first, with their duplicate flag and review (if any)."""
+    return vendor_call(request.app.state.vendors.invoices, vendor_id, status, duplicates, limit)
+
+
+@app.put("/api/vendors/{vendor_id}", tags=["vendors"])
+def update_vendor(request: Request, vendor_id: str, body: VendorBody):
+    """
+    Saves a vendor's notes and/or trusted flag (fields left out are not changed) and
+    writes the change to the audit log. Neither field affects validation.
+    """
+    if body.notes is None and body.trusted is None:
+        raise HTTPException(status_code=422, detail="Send notes, trusted or both")
+    vendor, changed = vendor_call(
+        request.app.state.vendors.update, vendor_id, body.actor, body.notes, body.trusted
+    )
+    if changed:
+        write_vendor_audit_entry(vendor, changed, body.actor)
+    return vendor
+
+
+def write_vendor_audit_entry(vendor: dict, changed: dict, actor: str):
+    """Notes the change in the audit log (best effort, like every audit write)."""
+    parts = []
+    if "trusted" in changed:
+        parts.append("Marked as a trusted vendor" if changed["trusted"] else "Trusted flag removed")
+    if "notes" in changed:
+        parts.append("Notes updated" if changed["notes"] else "Notes cleared")
+    append_audit_entries(
+        audit_log_path(),
+        [
+            {
+                "timestamp": datetime.now(UTC).isoformat(),
+                "event": "vendor_update",
+                "origin": "vendor",
+                "source_file": f"Vendor: {vendor['name']}",
+                "transaction_id": "N/A",
+                "errors": "",
+                "actor": actor,
+                "vendor_id": vendor["id"],
+                "detail": f"{'; '.join(parts)} by {actor}",
+                "trusted": vendor["trusted"],
+            }
+        ],
+        AUDIT_MAX_BYTES,
+    )
 
 
 @app.get("/api/rules", tags=["reference"])

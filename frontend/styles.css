@@ -5006,18 +5006,16 @@ textarea.text-input {
     }
 }
 
-/* Six menu items need the two-row header sooner than five did. */
-@media (max-width: 1400px) {
-    .dashboard-header {
-        grid-template-columns: auto 1fr;
-        grid-template-areas: "logo links" "nav nav";
-    }
-
-    .header-logo { grid-area: logo; }
-    .header-links { grid-area: links; justify-self: end; }
-    .main-nav { grid-area: nav; justify-self: stretch; }
-    .main-nav a { flex: 1; justify-content: center; }
+/* Seven menu items do not fit beside the logo and links, so the menu has its own row. */
+.dashboard-header {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "logo links" "nav nav";
 }
+
+.header-logo { grid-area: logo; }
+.header-links { grid-area: links; justify-self: end; }
+.main-nav { grid-area: nav; justify-self: stretch; }
+.main-nav a { flex: 1; justify-content: center; }
 
 @media (max-width: 560px) {
     /* Two rows of three instead of a menu that scrolls sideways. */
@@ -5087,4 +5085,156 @@ textarea.text-input {
 
 .stack-on-mobile .dup-tag {
     margin-left: 0;
+}
+
+/* ---------- Vendors ---------- */
+
+.trusted-tag {
+    margin-left: 0.4rem;
+    background: var(--success-bg);
+    color: var(--success-text);
+    border-color: var(--success-border);
+}
+
+.badge-vendor {
+    background: var(--primary-light);
+    color: var(--primary-text);
+    border-color: var(--primary-border);
+}
+
+.cell-sub .trusted-tag {
+    margin-left: 0;
+}
+
+.note-hint {
+    color: var(--text-secondary);
+}
+
+.status-counts {
+    display: inline-flex;
+    gap: 0.35rem;
+}
+
+.sc {
+    min-width: 2rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    text-align: center;
+}
+
+.sc-VALID { background: var(--success-bg); color: var(--success-text); }
+.sc-REQUIRES_REVIEW { background: var(--warning-bg); color: var(--warning-text); }
+.sc-INVALID { background: var(--danger-bg); color: var(--danger-text); }
+
+.vendor-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.65rem;
+    margin-bottom: 1rem;
+    color: var(--text-body);
+    font-size: var(--fs-sm);
+}
+
+.vendor-line a {
+    margin-left: auto;
+    color: var(--primary-text);
+}
+
+.check-field {
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+    margin-bottom: 0.9rem;
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.check-field input,
+.check-inline input {
+    flex: none;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin-top: 0.15rem;
+    accent-color: var(--primary-fill);
+}
+
+.check-inline {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    color: var(--text-body);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+
+.invoice-filters {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-left: auto;
+    align-items: center;
+}
+
+.vendor-invoices .section-head {
+    margin-bottom: 0.9rem;
+}
+
+.vendor-invoices-output {
+    min-height: 6rem;
+}
+
+.empty-line,
+.table-note {
+    padding: 0.5rem 0;
+    font-size: var(--fs-sm);
+}
+
+.legend-line {
+    margin-top: 0.5rem;
+    font-size: var(--fs-xs);
+}
+
+@media (max-width: 560px) {
+    .vendor-line a {
+        margin-left: 0;
+    }
+
+    .main-nav a {
+        flex: 1 1 22%;
+        padding: 0.5rem 0.25rem;
+        font-size: 0.78rem;
+    }
+
+    .invoice-filters {
+        margin-left: 0;
+    }
+}
+
+.more-currencies {
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+    cursor: help;
+}
+
+/* A vendor can have hundreds of invoices: scroll inside the panel, keep the header in view. */
+.vendor-invoices-output .table-scroll {
+    max-height: 34rem;
+    overflow: auto;
+}
+
+.vendor-invoices-output thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--card-solid);
+}
+
+@media (max-width: 720px) {
+    .vendor-invoices-output .table-scroll {
+        max-height: none;
+    }
 }

@@ -87,6 +87,7 @@
                 <a href="#/check" data-route="check"><svg class="icon" aria-hidden="true"><use href="#i-check-square"/></svg>Check</a>
                 <a href="#/batch" data-route="batch"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg>Batch</a>
                 <a href="#/review" data-route="review"><svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg>Review<span class="nav-count is-empty" id="review-nav-count"></span></a>
+                <a href="#/vendors" data-route="vendors"><svg class="icon" aria-hidden="true"><use href="#i-user"/></svg>Vendors</a>
                 <a href="#/audit" data-route="audit"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg>Audit log</a>
                 <a href="#/rules" data-route="rules"><svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>Rules &amp; model</a>
                 <a href="#/about" data-route="about"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>About</a>
@@ -416,6 +417,45 @@
                 <div id="review-detail" hidden></div>
             </section>
 
+            <!-- ============ Vendors ============ -->
+            <section class="view" id="view-vendors" data-view="vendors" aria-labelledby="vendors-title" hidden>
+                <div class="view-head">
+                    <h1 id="vendors-title" class="view-title" tabindex="-1">Vendors</h1>
+                    <p class="view-lede">Every supplier seen in the invoices you have checked, with its numbers: how many invoices, how they came out, how much, which were duplicates and how risky they looked. Add notes, or mark a vendor as trusted: that is a note for people, and it never changes how an invoice is validated.</p>
+                </div>
+
+                <div id="vendor-list">
+                    <section class="glass-panel review-panel" aria-label="Vendors">
+                        <div class="audit-toolbar">
+                            <div class="segmented" id="vendor-filter" role="radiogroup" aria-label="Trusted">
+                                <label><input type="radio" name="vendor-trusted" value="" checked><span>All</span><span class="count" data-count="all"></span></label>
+                                <label><input type="radio" name="vendor-trusted" value="true"><span>Trusted</span><span class="count" data-count="trusted"></span></label>
+                            </div>
+                            <div class="audit-tools">
+                                <label class="select-wrap">
+                                    <span class="visually-hidden">Sort by</span>
+                                    <select id="vendor-sort"></select>
+                                    <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
+                                </label>
+                                <label class="search">
+                                    <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+                                    <span class="visually-hidden">Search vendor names and IDs</span>
+                                    <input type="search" id="vendor-search" placeholder="Search vendors" maxlength="200" autocomplete="off">
+                                </label>
+                                <button type="button" class="btn btn-secondary" id="vendor-refresh"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>Refresh</button>
+                            </div>
+                        </div>
+                        <div id="vendor-output" class="review-output">
+                            <div class="skeleton skeleton-row"></div>
+                            <div class="skeleton skeleton-row"></div>
+                            <div class="skeleton skeleton-row"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="vendor-detail" hidden></div>
+            </section>
+
             <!-- ============ Audit log ============ -->
             <section class="view" id="view-audit" data-view="audit" aria-labelledby="audit-title" hidden>
                 <div class="view-head">
@@ -439,6 +479,7 @@
                                     <option value="web">Single checks</option>
                                     <option value="web-batch">Batch checks</option>
                                     <option value="pipeline">Startup batch</option>
+                                    <option value="vendor">Vendor edits</option>
                                 </select>
                                 <svg class="icon" aria-hidden="true"><use href="#i-chevron-down"/></svg>
                             </label>

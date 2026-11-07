@@ -13,7 +13,7 @@ const PAGE_SIZE = 50;
 const MAX_PAGE = 500; // the API's upper limit
 const SEARCH_DELAY_MS = 250;
 
-const ORIGIN_TEXT = { web: 'Single check', 'web-batch': 'Batch check', pipeline: 'Startup batch' };
+const ORIGIN_TEXT = { web: 'Single check', 'web-batch': 'Batch check', pipeline: 'Startup batch', vendor: 'Vendor edit' };
 
 let dom;
 let filters = { status: '', origin: '', q: '' };
@@ -196,9 +196,11 @@ function render(data) {
                 el('td', { 'data-label': 'Transaction ID' }, entry.transaction_id && entry.transaction_id !== 'N/A'
                     ? el('span', { class: 'mono', text: entry.transaction_id })
                     : el('span', { class: 'cell-muted', text: '–' })),
-                el('td', { 'data-label': 'Status' }, badge(entry.validation_status)),
-                el('td', { class: 'num', 'data-label': 'Risk' }, flagBadge(entry)),
-                el('td', { 'data-label': 'Reasons' }, entry.errors
+                el('td', { 'data-label': 'Status' }, entry.event
+                    ? el('span', { class: 'badge badge-vendor' }, icon('user'), 'Vendor update')
+                    : badge(entry.validation_status)),
+                el('td', { class: 'num', 'data-label': 'Risk' }, entry.event ? el('span', { class: 'cell-muted', text: '–' }) : flagBadge(entry)),
+                el('td', { 'data-label': 'Reasons' }, entry.event ? el('span', { text: entry.detail || 'Vendor changed' }) : entry.errors
                     ? el('span', { class: 'reasons' }, String(entry.errors).split('; ').map(message => el('span', { text: message })))
                     : el('span', { class: 'cell-muted', text: 'None' })),
                 el('td', { 'data-label': 'JSON line' }, toggle)),
