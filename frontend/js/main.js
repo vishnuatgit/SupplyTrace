@@ -1,6 +1,6 @@
 // Entry point: a small hash router over the seven views, the theme toggle, and
 // the wiring between views. Routes look like #/check, #/batch, #/review,
-// #/audit, #/rules, #/about. Hashes without the slash (#main) are in-page links.
+// #/vendors, #/audit, #/rules, #/about. Hashes without the slash (#main) are in-page links.
 
 import { initCheck, getSamples, runSampleById, editInSandbox } from './check.js';
 import { initBatch, runSamples, runFiles } from './batch.js';

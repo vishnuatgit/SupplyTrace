@@ -24,7 +24,7 @@ Every journey a visitor can take through the web app, and every flow the backend
   9. [Serving the frontend](#s9-serving-the-frontend)
 - [Error reference](#error-reference)
 
-The frontend is plain HTML, CSS and JavaScript modules in `frontend/` (no build step). The API is FastAPI in `src/api/`. Paths below are relative to the repository root.
+The review queue, duplicate detection and vendor directory are described in the [walkthroughs](walkthroughs/); the flows below note where they hook in. The frontend is plain HTML, CSS and JavaScript modules in `frontend/` (no build step). The API is FastAPI in `src/api/`. Paths below are relative to the repository root.
 
 ---
 
@@ -59,7 +59,7 @@ sequenceDiagram
 **Steps**
 
 1. `frontend/js/theme.js` runs synchronously in `<head>` and sets `data-theme` from `localStorage` (`supplytrace.theme`), defaulting to dark, so the page never flashes the wrong theme.
-2. `main.js` wires every view (`initCheck`, `initBatch`, `initAudit`, `initOverview`, `initPipeline`, `initChartTooltips`) and calls `handleRoute()`. `initPipeline()` also builds the compact pipeline strip inside the inspector's loading placeholder.
+2. `main.js` wires every view (`initCheck`, `initBatch`, `initAudit`, `initReview`, `initVendors`, `initOverview`, `initPipeline`, `initChartTooltips`) and calls `handleRoute()`. `initPipeline()` also builds the compact pipeline strip inside the inspector's loading placeholder.
 3. The Check view's `onShow` is `refreshOverview()` (`overview.js`), which fetches `/api/overview` and renders the KPI ribbon (with a short count-up), the Valid share ring (with the number of files it covers), the risk histogram, the most common reasons and the Recent Analyses accordion. The histogram is drawn at its container's real width, so its labels are never scaled down, and is redrawn when that width changes; it has ticks at 0, 25, 50, 75 and 100%, the dashed 50% threshold, a Low/High proportion bar and a legend with both counts.
 4. Each Recent Analyses row keeps the same height: the file name on the first line; the transaction ID (cut short with an ellipsis when space runs out, in full on hover), the source and the relative time on the second. Rows this browser tab checked are tagged **You**: after a check, `rememberChecks()` keeps the `logged_at` timestamp the server returned (in `sessionStorage`), and the feed matches it against each entry's `timestamp` and file name.
 5. The overview refreshes after every check, when the browser tab becomes visible again, and every 30 seconds while the Check view is on screen (`scheduleRefresh()`). The tag in the panel header reads "Live · audit log".
@@ -235,7 +235,7 @@ flowchart LR
 **Steps** (`frontend/js/audit.js`)
 
 1. `showAudit()` runs `load()` each time the view opens. Only the latest request may render (a request counter), so quick filter changes never show stale results.
-2. The status filter is a radio group styled as segments, with counts that follow the source and search filters (the server computes them). The source select chooses single checks, batch checks or the startup batch; the search matches file names and transaction IDs.
+2. The status filter is a radio group styled as segments, with counts that follow the source and search filters (the server computes them). The source select chooses single checks, batch checks, the startup batch or vendor edits (which show as "Vendor update" rows); the search matches file names and transaction IDs.
 3. A thin stacked bar shows the status split of what the filters match.
 4. Each row shows the time (absolute and relative), file with its source and size, transaction ID, status, risk and reasons. The JSON button opens the exact line from the log, pretty-printed, with Copy line.
 5. Show more raises the limit by 50, up to the API's 500. Export saves the shown lines as JSON Lines. Refresh reloads and confirms with a toast.
@@ -255,10 +255,10 @@ flowchart LR
 
 ### 9. Navigate, deep-link and switch theme
 
-- `main.js` is a hash router over five views: `#/check`, `#/batch`, `#/audit`, `#/rules`, `#/about`. Changing view sets the title, marks the nav link with `aria-current`, scrolls to the top and moves focus to the view's heading.
+- `main.js` is a hash router over seven views: `#/check`, `#/batch`, `#/review`, `#/vendors`, `#/audit`, `#/rules`, `#/about`. Changing view sets the title, marks the nav link with `aria-current`, scrolls to the top and moves focus to the view's heading.
 - Deep links: `#/check?sample=<id>` runs that sample; `#/batch?run=samples` runs the sample batch once.
 - The theme button switches dark and light, saves the choice in `localStorage` (wrapped in try/catch, so blocked storage only means the choice is not remembered) and updates the `theme-color` meta tag.
-- On phones the header keeps every link: the brand with "Built by Vishnu Jayanth" as a byline under it, the theme and GitHub buttons, and all five tabs in one row down to 360 px. On the Check view the first screen holds the one-line description, the compact How it works row and the first sample chips.
+- On phones the header keeps every link: the brand with "Built by Vishnu Jayanth" as a byline under it, the theme and GitHub buttons, and all the tabs, down to 360 px. On the Check view the first screen holds the one-line description, the compact How it works row and the first sample chips.
 - Motion is short (mostly 150 to 450 ms; a jumped-to line and a new feed entry fade their highlight over about a second) and is turned off under `prefers-reduced-motion`; the pipeline then settles at once.
 
 ---
@@ -278,7 +278,8 @@ flowchart TD
     C -- yes --> T
     O --> T[train_from_results: RiskPredictor.fit on results.csv]
     B -- no --> T
-    T --> M[build_model_card: importances and holdout evaluation]
+    T --> D[seed_demo_data: record the startup batch and starter samples, queue the failing ones, only on an empty database]
+    D --> M[build_model_card: importances and holdout evaluation]
     M --> R[ready to serve]
 ```
 
@@ -307,14 +308,14 @@ sequenceDiagram
     AD->>AD: predict: predict_risk and explain
     AD->>AD: index_elements (expat line numbers), describe_field, locate_finding, describe_check
     AD-->>EP: result with timings_ms
-    EP->>AU: log_result: write_single_audit_log, origin "web"
+    EP->>AU: record_result: fingerprint, duplicate check, log_result (origin "web"), vendor lookup, review queue
     AU-->>EP: the entry's timestamp, or None
-    EP-->>C: 200 result + "logged" and "logged_at"
+    EP-->>C: 200 result + "logged", "logged_at", "duplicate", "vendor", "review"
 ```
 
-**Files and functions:** `src/api/upload_limit.py` `UploadSizeLimitMiddleware`; `src/api/server.py` `analyze_xml()`, `log_result()`, `write_single_audit_log()`; `src/api/analysis.py` `check_upload()`, `analyze_document()`, `predict()`, `describe_field()`, `locate_finding()`, `describe_check()`; `src/ingestion/xml_loader.py` `XMLLoader.parse_bytes()`; `src/ingestion/parser.py` `XMLParser`; `src/ingestion/locator.py` `index_elements()`; `src/validation/rules.py` `Validator`; `src/features/extractor.py` `FeatureExtractor`; `src/prediction/model.py` `RiskPredictor`.
+**Files and functions:** `src/api/upload_limit.py` `UploadSizeLimitMiddleware`; `src/api/server.py` `analyze_xml()`, `record_result()`, `log_result()`, `write_single_audit_log()`; `src/invoices/store.py` `InvoiceStore.record()`; `src/reviews/store.py` `ReviewStore.queue()`; `src/api/analysis.py` `check_upload()`, `analyze_document()`, `predict()`, `describe_field()`, `locate_finding()`, `describe_check()`; `src/ingestion/xml_loader.py` `XMLLoader.parse_bytes()`; `src/ingestion/parser.py` `XMLParser`; `src/ingestion/locator.py` `index_elements()`; `src/validation/rules.py` `Validator`; `src/features/extractor.py` `FeatureExtractor`; `src/prediction/model.py` `RiskPredictor`.
 
-**Output:** `filename`, `id`, `status`, `errors`, `findings` (broken rules with lines), `checks` (all five rules with state and line), `fields` (where the ID and amount came from), `features`, `prediction` (`risk_score`, `risk_flag`), `risk_drivers` (`base` and per-feature `contributions` in percentage points, or `null`), `processing_ms`, `timings_ms` (`parse`, `validate`, `score`, `locate`), `logged`, and `logged_at` (the timestamp of the audit entry, or `null` when it could not be written; the page uses it to tag the visitor's own checks).
+**Output:** `filename`, `id`, `status`, `errors`, `findings` (broken rules with lines), `checks` (all five rules with state and line), `fields` (where the ID and amount came from), `features`, `prediction` (`risk_score`, `risk_flag`), `risk_drivers` (`base` and per-feature `contributions` in percentage points, or `null`), `processing_ms`, `timings_ms` (`parse`, `validate`, `score`, `locate`), `logged`, and `logged_at` (the timestamp of the audit entry, or `null` when it could not be written; the page uses it to tag the visitor's own checks). `record_result()` adds `fingerprint` (SHA-256 of the file), `duplicate` (`exact` or `likely` with the earlier invoice, or `null`), `vendor` (`id`, `name`, `trusted`, or `null`) and `review` (`id`, `state`, `assignee`, or `null`).
 
 **Failure handling:**
 
@@ -388,7 +389,7 @@ flowchart TD
     RB --> L[for each file: check_batch_file]
     L --> CU{check_upload and analyze_document}
     CU -- AnalysisError --> RJ[rejected_result: status REJECTED, reason, parse_error]
-    CU -- ok --> AL[log_result, origin web-batch]
+    CU -- ok --> AL[record_result, origin web-batch]
     AL --> OUT{endpoint}
     RJ --> OUT
     OUT -- batch --> J[one JSON: count, summary, results]
@@ -400,13 +401,13 @@ Both endpoints share `read_batch()`, `check_batch_file()` and `summarize()` in `
 ### S6. Audit log: write, rotate, read
 
 - **Write** (`append_audit_entries()` in `src/utils/audit.py`): creates the directory, rotates `audit_log.jsonl` to `audit_log.jsonl.1` once it reaches `SUPPLYTRACE_AUDIT_MAX_BYTES` (1 MB by default, about 4,000 entries), and appends one JSON object per line. It is best effort: any failure is logged and reported by returning `False`, never raised. For the API, `write_single_audit_log()` (`src/api/server.py`) builds the entry and returns its timestamp (or `None`), and `log_result()` puts that on the result as `logged` and `logged_at`.
-- **Entry**: `timestamp` (UTC), `source_file`, `transaction_id`, `validation_status`, `errors`, `risk_score`, `risk_flag`, `origin` (`web`, `web-batch` or `pipeline`), and, for the dashboard, `xml_size`, `nesting_depth`, `missing_optional_fields` and (for web checks) `processing_ms`.
+- **Entry**: `timestamp` (UTC), `source_file`, `transaction_id`, `validation_status`, `errors`, `risk_score`, `risk_flag`, `origin` (`web`, `web-batch`, `pipeline`, or `vendor` for a vendor edit, which has an `event` instead of a status), `duplicate_kind` and `duplicate_of` for web checks, and, for the dashboard, `xml_size`, `nesting_depth`, `missing_optional_fields` and (for web checks) `processing_ms`.
 - **Read** (`read_audit_entries()`): newest first, each entry with its exact line; blank, broken or non-object lines are skipped, and a missing log reads as empty.
 - **API** (`get_audit()` in `src/api/server.py`): filters by `status`, `origin` and `q` (case-insensitive search in the file name and transaction ID, up to 200 characters), returns `total`, per-status `counts` after the origin and search filters, `matching`, and up to `limit` (1 to 500) entries. Invalid parameters get a `422`.
 
 ### S7. Dashboard overview
 
-`GET /api/overview` reads the audit log and `build_overview()` (`src/dashboard/overview.py`) returns: `total`; `counts` per status; `origins`; `valid_share` and `invalid_rate` (percent, or `null` for an empty log); `scored`, `average_risk`, `high_risk` and `low_risk`; a 10-bin `risk_histogram`, each bin split into LOW and HIGH flags; the five most common `top_reasons` with their status; `latest`; and the newest `recent` entries (1 to 50, default 15). Values that are not valid statuses, origins or numbers are ignored rather than counted. The page calls it on load, after every check, whenever the Check view is shown again or the browser tab becomes visible, and every 30 seconds while the Check view is on screen; a failed refresh keeps the last numbers on screen, marked with when they were loaded.
+`GET /api/overview` reads the audit log and `build_overview()` (`src/dashboard/overview.py`) returns: `total`; `counts` per status; `origins`; `valid_share` and `invalid_rate` (percent, or `null` for an empty log); `scored`, `average_risk`, `high_risk` and `low_risk`; a 10-bin `risk_histogram`, each bin split into LOW and HIGH flags; the five most common `top_reasons` with their status; `latest`; and the newest `recent` entries (1 to 50, default 15). Vendor edits are left out. Values that are not valid statuses, origins or numbers are ignored rather than counted. The page calls it on load, after every check, whenever the Check view is shown again or the browser tab becomes visible, and every 30 seconds while the Check view is on screen; a failed refresh keeps the last numbers on screen, marked with when they were loaded.
 
 ### S8. Batch pipeline from the command line
 
