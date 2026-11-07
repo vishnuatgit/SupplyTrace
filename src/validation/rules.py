@@ -103,7 +103,7 @@ def parse_amount(raw) -> tuple[str, float | None]:
     if not _NUMBER_RE.match(text):
         return "invalid", None
     value = float(text)
-    if text.startswith("-"):
+    if value < 0:
         return "negative", value
     return "ok", value
 
