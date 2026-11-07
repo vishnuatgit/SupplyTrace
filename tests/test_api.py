@@ -499,3 +499,16 @@ def test_api_routes_are_grouped_in_the_docs(client):
     assert paths["/api/analyze/batch/stream"]["post"]["tags"] == ["analysis"]
     assert paths["/api/overview"]["get"]["tags"] == ["dashboard"]
     assert paths["/api/audit"]["get"]["tags"] == ["audit"]
+
+
+def test_an_upload_without_a_usable_file_gets_the_apps_own_message(client):
+    for files in (None, {"file": ("", b"<Invoice/>", "application/xml")}):
+        response = client.post("/api/analyze", files=files)
+        assert response.status_code == 422
+        assert (
+            isinstance(response.json()["detail"], str) and "XML file" in response.json()["detail"]
+        )
+    batch = client.post("/api/analyze/batch")
+    assert batch.status_code == 422 and isinstance(batch.json()["detail"], str)
+    # Other validation errors keep FastAPI's usual list
+    assert isinstance(client.get("/api/audit", params={"limit": 0}).json()["detail"], list)
