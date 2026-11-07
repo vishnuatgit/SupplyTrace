@@ -79,8 +79,10 @@ function formOf(field, files) {
 }
 
 // Uploads files as multipart form data under one field name and returns the JSON reply.
-export async function postFiles(url, field, files) {
-    return readJson(await request(url, { method: 'POST', body: formOf(field, files) }));
+export async function postFiles(url, field, files, extra = {}) {
+    const form = formOf(field, files);
+    Object.entries(extra).forEach(([name, value]) => form.append(name, value));
+    return readJson(await request(url, { method: 'POST', body: form }));
 }
 
 // Uploads files to an endpoint that answers in newline-delimited JSON, and
@@ -123,4 +125,13 @@ export function precheckFile(file) {
     if (file.size > MAX_UPLOAD_BYTES) return TOO_LARGE_MESSAGE;
     if (file.size === 0) return EMPTY_MESSAGE;
     return null;
+}
+
+// Sends a JSON body with POST and returns the JSON reply.
+export async function postJson(url, body) {
+    return readJson(await request(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }));
 }

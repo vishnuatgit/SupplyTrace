@@ -316,7 +316,7 @@ function render() {
     const head = el('div', { class: 'batch-head' },
         el('div', {},
             el('h2', { text: `Checked ${plural(rows.length, 'file')}` }),
-            el('p', { class: 'muted', text: `Finished at ${time}. Every accepted file is now in the audit log.` })),
+            el('p', { class: 'muted' }, `Finished at ${time}. Every accepted file is now in the audit log.`, queueLink(rows))),
         el('div', { class: 'batch-downloads' },
             el('button', { type: 'button', class: 'btn btn-secondary', on: { click: downloadCsv } }, icon('download'), 'CSV'),
             el('button', { type: 'button', class: 'btn btn-secondary', on: { click: downloadJson } }, icon('download'), 'JSON')));
@@ -370,6 +370,14 @@ function sortedRows() {
             const vb = column.value(b.result, b.index);
             return (va < vb ? -1 : va > vb ? 1 : a.index - b.index) * sort.dir;
         });
+}
+
+// A note and link when files of this batch are waiting in the review queue.
+function queueLink(rows) {
+    const queued = rows.filter(row => row.result.review).length;
+    if (!queued) return null;
+    return el('span', {}, ` ${plural(queued, 'file')} ${queued === 1 ? 'is' : 'are'} in the review queue. `,
+        el('a', { href: '#/review', text: 'Open the queue' }));
 }
 
 // One table row. With onOpen the file name is a button that opens the drawer;
