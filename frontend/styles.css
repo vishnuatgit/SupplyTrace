@@ -1210,8 +1210,8 @@ main {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
     grid-template-areas:
-        "kpis kpis"
-        "left right";
+        "left right"
+        "kpis kpis";
     gap: 1.5rem;
     align-items: start;
 }
@@ -4179,6 +4179,26 @@ th.num .sort-btn {
     .intro-row {
         gap: 1.1rem;
         margin-bottom: 1.25rem;
+    }
+
+    /* The samples and upload come before "How it works", so a visitor can try one without scrolling. */
+    #view-check:not([hidden]) {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #view-check .intro-row {
+        display: contents;
+    }
+
+    #view-check .dashboard-grid {
+        order: 1;
+        margin-top: 1.25rem;
+    }
+
+    #view-check .pipeline {
+        order: 2;
+        margin-top: 1.25rem;
     }
 
     .pipeline {
