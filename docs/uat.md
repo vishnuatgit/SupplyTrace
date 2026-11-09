@@ -65,7 +65,7 @@ Ask these in order, after the tasks.
 
 Write pass or fail in each T column. Record the wake-up time separately for each tester.
 
-**Passing the UAT:** at least 4 of 5 testers pass T1, T2 and T3. T4 and T5 are expected to expose issues: list every failure in the notes column and add it to `docs/end-to-end-review.md` as evidence.
+**Passing the UAT:** at least 4 of 5 testers pass T1, T2 and T3. T4 and T5 are expected to expose issues: list every failure in the notes column.
 
 ## Sign-off
 
