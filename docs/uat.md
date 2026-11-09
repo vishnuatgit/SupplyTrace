@@ -101,4 +101,4 @@ None in task behaviour. Observations, not defects: after the `.txt` error the pr
 
 - Fixed the same day: a rejected upload now hides the previous result and the error adds a next step (use a sample or download one); a sample download link was added beside the upload box. Verified by reproducing before (result stayed visible) and after (result hidden).
 
-Screenshots and raw results: `C:\Users\jayan\AppData\Local\Temp\claude\4058a2d8ff66180b\990022ee-5eea-4ecd-9062-80f21cc23e98\scratchpad\uat-supplytrace\` (not in the repo).
+Screenshots and raw results are kept outside the repo.
