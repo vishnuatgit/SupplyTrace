@@ -1,6 +1,6 @@
 # Software development lifecycle: SupplyTrace
 
-SupplyTrace checks supplier XML invoices with deterministic rules, points each rule at a line of the file, adds an experimental Random Forest risk score, and logs every result to an audit log shown on a web dashboard ([README](../README.md)). It is a solo student project by Chandana Vishnu Jayanth. Work was iterative. Early commits went straight to `main`. From 2026-11-02 changes went through short-lived branches merged by pull request. The first commit is dated 2026-06-11 and the latest 2026-11-07. The repo has 55 commits on `main` (`git rev-list --count HEAD`), 10 merge commits for pull requests #3 to #13 (no #2, #10), and one squash-merged pull request (#1, "Fix parsing and API bugs, add tests, CI, license and accurate README").
+SupplyTrace checks supplier XML invoices with deterministic rules, points each rule at a line of the file, adds an experimental Random Forest risk score, and logs every result to an audit log shown on a web dashboard ([README](../README.md)). It is a solo student project by Chandana Vishnu Jayanth. Work was iterative. Early commits went straight to `main`. From 2026-11-02 changes went through short-lived branches merged by pull request. The first commit is dated 2026-06-11 and the latest 2026-11-09. The repo has 57 commits on `main` (`git rev-list --count HEAD`), 11 merge commits for pull requests #3 to #14 (no #2, #10), and one squash-merged pull request (#1, "Fix parsing and API bugs, add tests, CI, license and accurate README").
 
 ## 1. Planning and requirements
 
@@ -21,7 +21,7 @@ SupplyTrace checks supplier XML invoices with deterministic rules, points each r
 - **Stack, pinned** in [requirements.txt](../requirements.txt): fastapi 0.161.1, uvicorn 0.54.0, python-multipart 0.0.32, pandas 3.0.3, numpy 2.4.6, scikit-learn 1.9.0, defusedxml 0.7.1, sqlalchemy 2.0.57. Dev tools in [requirements-dev.txt](../requirements-dev.txt): pytest 9.1.1, pytest-cov 7.0.0, httpx 0.28.1, ruff 0.17.2. Frontend is plain HTML, CSS and JavaScript modules with no build step.
 - **Layout.** `src/` has one package per stage (ingestion, validation, features, prediction, pipeline, dashboard, reviews, vendors, invoices, storage, utils, api). `frontend/` holds the views, `scripts/` the two data commands, `tests/` the suite ([README](../README.md), "Project structure").
 - **Standards.** Ruff lint and format, line length 100, rules E, F, W, I, B, UP ([pyproject.toml](../pyproject.toml)). CI enforces both.
-- **Branches and PRs.** Branch names seen in merge messages: `add-mit-license`, `readme-license`, `readme-case-study`, `fix/functionality`, `small-fixes`, `auto-deploy`, `feat/review-workflow`, `feat/duplicate-detection`, `feat/vendor-directory`, `proofread`. That is 11 merged pull requests in total. The repo contains no pull-request template or review records.
+- **Branches and PRs.** Branch names seen in merge messages: `add-mit-license`, `readme-license`, `readme-case-study`, `fix/functionality`, `small-fixes`, `auto-deploy`, `feat/review-workflow`, `feat/duplicate-detection`, `feat/vendor-directory`, `proofread`, `risk-next-step`. That is 12 merged pull requests in total. The repo contains no pull-request template or review records.
 
 ## 4. Testing
 
