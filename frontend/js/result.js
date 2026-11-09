@@ -168,7 +168,12 @@ export function riskBlock(result) {
                 el('p', { class: 'risk-explain-title', text: 'What drove it' }),
                 drivers)),
         el('p', { class: 'risk-note' },
-            'A Random Forest trained on 400 synthetic invoices. Each tree\'s path is followed from the base rate to the score, and every split\'s change is credited to its feature. The status above is the decision; this score is advice. ',
+            el('strong', { text: 'Next step: ' }),
+            flag === 'HIGH'
+                ? 'check what drove it before approving payment. The rule checks above decide the status.'
+                : 'nothing extra from the model. The rule checks above decide the status.'),
+        el('p', { class: 'risk-note' },
+            'The score is how likely the model thinks the file is to fail the rules. It ranks files; it is not a calibrated probability. A Random Forest trained on 400 synthetic invoices. Each tree\'s path is followed from the base rate to the score, and every split\'s change is credited to its feature. The status above is the decision; this score is advice. ',
             el('a', { href: '#/rules', text: 'Read the model card' })));
 }
 

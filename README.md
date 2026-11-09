@@ -1,6 +1,6 @@
 # SupplyTrace
 
-**Checks supplier XML invoices with deterministic rules, marks the failing lines, and adds an experimental ML risk score.**
+**Catch invalid, duplicate and risky supplier invoices before they're paid.** It checks supplier XML invoices with deterministic rules, marks the failing lines, and adds an experimental ML risk score.
 
 Validate nested supplier XML invoices (UBL-style) with deterministic rules that label each file `VALID`, `INVALID` or `REQUIRES_REVIEW`, point every rule at the line of the file behind it, add an experimental risk score from a small Random Forest, and track every result on a web dashboard backed by a JSON Lines audit log.
 
@@ -248,7 +248,7 @@ SupplyTrace/
 │   └── utils/             audit.py (audit log writer and reader)
 ├── scripts/               generate_data.py, run_pipeline.py
 ├── tests/                 pytest suite
-├── docs/                  architecture.md, process-flows.md, roadmap.md, walkthroughs/, screenshots/
+├── docs/                  architecture.md, process-flows.md, roadmap.md, sdlc.md, uat.md, walkthroughs/, screenshots/
 ├── render.yaml            Render Blueprint for the live demo
 ├── requirements.txt       pinned runtime dependencies
 └── requirements-dev.txt   test and lint tools
