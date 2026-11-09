@@ -9,17 +9,17 @@ const TOO_LARGE_MESSAGE = 'File is too large. The demo accepts XML files up to 1
 const NOT_XML_MESSAGE = 'Only .xml files are supported';
 const EMPTY_MESSAGE = 'The file is empty';
 
-const OFFLINE_MESSAGE = 'Could not reach the server. If the demo has been idle it may need a moment to wake up, so please try again shortly.';
-const UNEXPECTED_MESSAGE = 'The server sent an unexpected response. Please try again.';
+const OFFLINE_MESSAGE = 'Could not reach the server. If the demo has been idle it may be waking up (the free server sleeps when idle). Wait a minute and try again, and check your connection.';
+const UNEXPECTED_MESSAGE = 'The server sent an unexpected response. Try again in a minute; if it keeps happening, reload the page.';
 
 function messageForStatus(status) {
     if (status === 413) return TOO_LARGE_MESSAGE;
-    if (status === 429) return 'Too many requests. Please wait a few seconds and try again.';
+    if (status === 429) return 'Too many requests. Wait a few seconds, then try again.';
     if (status === 502 || status === 503 || status === 504) {
-        return 'The server is starting up or busy. Please try again in a few seconds.';
+        return 'The server is starting up or busy (the free server may be waking up). Try again in a minute.';
     }
-    if (status >= 500) return `The server ran into a problem (HTTP ${status}). Please try again.`;
-    return `The request failed (HTTP ${status}).`;
+    if (status >= 500) return `The server ran into a problem (HTTP ${status}). Try again in a minute; if it keeps failing, try a different file.`;
+    return `The request failed (HTTP ${status}). Check the file and try again.`;
 }
 
 // fetch() that turns network failures and error responses (JSON or not, e.g.
