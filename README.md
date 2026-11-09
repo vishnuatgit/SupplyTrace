@@ -133,6 +133,8 @@ python -m scripts.run_pipeline       # validates them, trains the model, writes 
 
 All settings are optional environment variables. Relative paths are resolved against the working directory.
 
+A template with every variable is in `.env.example`.
+
 | Variable | Default | Purpose |
 |:--|:--|:--|
 | `SUPPLYTRACE_RESULTS_DIR` | `results` | Batch results (`results.csv`, `powerbi_summary.csv`). |

@@ -241,6 +241,7 @@
                                     <div class="upload-icon"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></div>
                                     <h3>Drag &amp; drop an XML invoice</h3>
                                     <p>Checked on the server, not stored. XML only, up to 1&nbsp;MB. Drop several files to check them as a batch.</p>
+                                    <p class="hint">XML (UBL-style) invoices are the only format. <a href="/api/samples/valid" download="valid_invoice.xml">Download a sample</a> to see one.</p>
                                     <input type="file" id="file-input" accept=".xml,text/xml,application/xml" hidden>
                                     <button type="button" id="browse-btn" class="btn btn-outline">Select file</button>
                                 </div>
@@ -374,7 +375,7 @@
                 </div>
 
                 <div id="review-list">
-                    <section class="glass-panel review-panel" aria-label="Review queue">
+                    <section class="glass-panel review-panel" aria-label="Review queue entries">
                         <div class="audit-toolbar">
                             <div class="segmented" id="review-filter" role="radiogroup" aria-label="Review state">
                                 <label><input type="radio" name="review-state" value="open" checked><span>Open</span><span class="count" data-count="open"></span></label>
@@ -425,7 +426,7 @@
                 </div>
 
                 <div id="vendor-list">
-                    <section class="glass-panel review-panel" aria-label="Vendors">
+                    <section class="glass-panel review-panel" aria-label="Vendor list">
                         <div class="audit-toolbar">
                             <div class="segmented" id="vendor-filter" role="radiogroup" aria-label="Trusted">
                                 <label><input type="radio" name="vendor-trusted" value="" checked><span>All</span><span class="count" data-count="all"></span></label>

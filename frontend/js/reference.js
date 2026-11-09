@@ -51,7 +51,7 @@ function rulesSection(data) {
         el('p', { class: 'rule-message' }, el('span', { class: 'sub-label', text: 'Message ' }), el('code', { text: rule.message })),
         el('div', { class: 'rule-example' },
             el('p', { class: 'sub-label', text: 'A file that breaks it' }),
-            el('pre', { class: 'example' }, highlightXml(rule.example)))));
+            el('pre', { class: 'example', tabindex: '0', role: 'region', 'aria-label': `Example file for rule ${index + 1}` }, highlightXml(rule.example)))));
 
     const idTags = data.id_tags.filter(tag => tag !== 'ID');
     const chips = tags => el('span', { class: 'tag-chips' }, tags.map(tag => el('code', { class: 'tag-chip', text: `<${tag}>` })));
