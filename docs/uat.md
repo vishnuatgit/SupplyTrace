@@ -70,3 +70,35 @@ Write pass or fail in each T column. Record the wake-up time separately for each
 ## Sign-off
 
 Tested by: ____________  Date: ____________  Result (pass / pass with issues / fail): ____________  Signed: ____________
+
+## Automated acceptance check (2026-11-09)
+
+> Automated stand-in, not a real-user test: a scripted browser ran each task on the live demo. It shows each task *can* be completed, not that people understand the page. The real-user results table above is still to be filled.
+
+Run against https://supplytrace-fkpq.onrender.com with Chrome driven by Playwright, at 390x844 and 1280x800. The server was already awake (first load under 1 s). Eight analyses per size or fewer: one sample ("Missing ID"), the same XML file from `data/raw_xml/` twice (`invoice_0001.xml` on phone, `invoice_0002.xml` on desktop), and one `.txt` file. The files were new to the audit log, so the demo's audit log and review queue gained two entries per size; no review was assigned, approved or rejected.
+
+| Task | phone 390px | desktop 1280px | notes |
+|:--|:--|:--|:--|
+| T1 Understand the product | pass (wording only) | pass (wording only) | The first screen's heading reads "Catch invalid, duplicate and risky supplier invoices before they're paid." with a line on the five rules and the verdict labels. Whether a person says it in their own words within 60 s: n/a (needs a person). |
+| T2 See a failed invoice | pass | pass | The "Missing ID" chip gives INVALID, "1 rule failed", with the failing rule marked on a line. The chips were in the first screen, so "without being told about the samples" is n/a (needs a person). |
+| T3 Check your own file | pass | pass | Upload gave VALID in about 8 s. Stating the verdict correctly: n/a (needs a person). The native file picker did not open under automation in 3 of 3 attempts per size (clicking "Select file"), so the file was set on the hidden input directly. Code reads correctly (`browse-btn` calls `input.click()`), so this is probably a harness quirk, but not confirmed. |
+| T4 Understand the risk score | pass (labels only) | pass (labels only) | The "Experimental" tag sits beside the score, the "not a calibrated probability" note and a "Next step" line are present. Whether a person reads it as an estimate: n/a (needs a person). |
+| T5 Bad file and duplicate | pass | pass | Re-uploading the same file showed "Exact duplicate of invoice #NNN ... Find it in the audit log". A `.txt` file showed the red message "notinvoice.txt: Only .xml files are supported." Whether that message tells a person what to do: n/a (needs a person). |
+
+### Accessibility summary (axe-core 4.10.2)
+
+Views scanned at both sizes: check/home, a result (after "Missing ID"), review, vendors, about, rules (6 views x 2 sizes). Not scanned: batch, audit log. Totals across the 12 scans: critical 0, serious 3 findings (2 distinct rule IDs), moderate 2 findings (1 rule ID), minor 0.
+
+- `color-contrast` (serious): 37 nodes on the result view at both sizes, the XML line numbers (`.xml-ln`, marked `aria-hidden`) are below the contrast ratio.
+- `scrollable-region-focusable` (serious): 5 nodes on the rules view at 390px only, the `<pre>` rule examples scroll but cannot be reached by keyboard.
+- `landmark-unique` (moderate): review and vendors views at both sizes, two landmarks share the same name or role (the view `<section>` is the flagged element).
+- The check/home and about views had no violations. Automated checks cover only part of accessibility; keyboard and screen-reader use are not tested here.
+- Fixed the same day: XML line-number and punctuation contrast, the focusable example blocks on Rules, and unique Review and Vendors landmark names. A re-scan at 390 and 1280 px in both themes found no violations on check (with a result), rules, review, vendors and about.
+
+### Bugs found
+
+None in task behaviour. Observations, not defects: after the `.txt` error the previous result stays on screen below it (phone screenshot T5-phone.png), which may look like the `.txt` file was accepted; the `.txt` message states the rule but not the next step; the three axe rule IDs above are real, small accessibility fixes.
+
+- Fixed the same day: a rejected upload now hides the previous result and the error adds a next step (use a sample or download one); a sample download link was added beside the upload box. Verified by reproducing before (result stayed visible) and after (result hidden).
+
+Screenshots and raw results: `C:\Users\jayan\AppData\Local\Temp\claude\4058a2d8ff66180b\990022ee-5eea-4ecd-9062-80f21cc23e98\scratchpad\uat-supplytrace\` (not in the repo).

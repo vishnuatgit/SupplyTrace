@@ -54,7 +54,7 @@
     --syn-attr: #5eead4;
     --syn-val: #fcd34d;
     --syn-text: #f8fafc;
-    --syn-punct: #64748b;
+    --syn-punct: #7d8ba0;
     --line-invalid: rgba(239, 68, 68, 0.14);
     --line-review: rgba(245, 158, 11, 0.13);
     --line-found: rgba(99, 102, 241, 0.13);
@@ -113,7 +113,7 @@
     --syn-attr: #0f766e;
     --syn-val: #a16207;
     --syn-text: #0f172a;
-    --syn-punct: #8590a0;
+    --syn-punct: #5b6676;
     --line-invalid: rgba(239, 68, 68, 0.1);
     --line-review: rgba(245, 158, 11, 0.13);
     --line-found: rgba(99, 102, 241, 0.09);
@@ -1912,7 +1912,7 @@ button.check-row[aria-current="true"] {
     width: 40px;
     padding-right: 0.85rem;
     text-align: right;
-    color: var(--text-faint);
+    color: var(--text-secondary);
 }
 
 .xml-code {

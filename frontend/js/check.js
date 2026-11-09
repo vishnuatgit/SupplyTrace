@@ -251,6 +251,7 @@ function handleFiles(files) {
     if (busy || !files.length) return;
     hideError();
     if (files.length > 1) {
+        showInput();
         showError(`That's ${files.length} files.`, el('button', {
             type: 'button', class: 'btn-text', text: 'Check them as a batch',
             on: { click: () => { hideError(); hooks.onBatchFiles(files); } },
@@ -260,7 +261,9 @@ function handleFiles(files) {
     const [file] = files;
     const problem = precheckFile(file);
     if (problem) {
-        showError(`${file.name}: ${sentence(problem)}`);
+        showInput(); // a rejected file must not leave the previous result under the error
+        const next = /\.xml/.test(problem) ? ' Only XML invoices (UBL) are accepted. Try a sample above, or download one to edit.' : '';
+        showError(`${file.name}: ${sentence(problem)}${next}`);
         return;
     }
     (async () => {
@@ -282,6 +285,7 @@ function checkSandbox() {
     const file = new File([text], editorName, { type: 'text/xml' });
     const problem = precheckFile(file);
     if (problem) {
+        showInput();
         showError(sentence(problem));
         return;
     }
