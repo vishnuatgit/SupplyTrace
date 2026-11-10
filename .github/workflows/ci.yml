@@ -31,3 +31,23 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t supplytrace:ci .
+      - name: Smoke test container
+        run: |
+          docker run -d --name supplytrace -p 8000:8000 supplytrace:ci
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8000/healthz && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/healthz
+          curl -fsS http://127.0.0.1:8000/ | grep -q "SupplyTrace"
+          curl -fsS -X POST -F "file=@src/api/samples/valid_invoice.xml;type=text/xml"             http://127.0.0.1:8000/api/analyze | grep -q '"status"'
+      - name: Container logs
+        if: always()
+        run: docker logs supplytrace || true

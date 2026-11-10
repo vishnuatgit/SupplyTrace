@@ -129,6 +129,19 @@ python -m scripts.run_pipeline       # validates them, trains the model, writes 
 
 `generate_data` replaces any XML files already in `data/raw_xml/`.
 
+### Run with Docker
+
+The image mirrors the Render build: it installs `requirements.txt`, generates the synthetic batch and runs the pipeline at build time, then starts uvicorn as a non-root user.
+
+```bash
+docker compose up --build            # http://127.0.0.1:8000
+# or, without Compose:
+docker build -t supplytrace .
+docker run --rm -p 8000:8000 supplytrace
+```
+
+The container listens on `$PORT` (default 8000) and has a health check on `/healthz`. Reviews, invoice records and the audit log live inside the container and reset when it is removed.
+
 ### Configuration
 
 All settings are optional environment variables. Relative paths are resolved against the working directory.
@@ -147,6 +160,24 @@ A template with every variable is in `.env.example`.
 | `DATABASE_URL` | unset | Use another database instead, for example a free PostgreSQL on Neon (also install a driver such as `psycopg2-binary`). On Render's free tier the disk is ephemeral, so with SQLite the reviews, invoice records and vendor notes reset on every redeploy. |
 
 The dev server (`python -m src.api.server`) listens on `127.0.0.1:8000` with auto-reload; in production run `uvicorn src.api.server:app --host 0.0.0.0 --port <port>`.
+
+## Benchmarks
+
+Processing time of `analyze_document()`, the function behind `POST /api/analyze`, over the 8 bundled samples and the 400 generated invoices (408 files; 1 warm-up pass, 5 timed passes, 2,040 timed invoices). The model is trained on a temporary synthetic batch; no network and no repository files are used.
+
+| Metric | Value |
+|:--|--:|
+| Invoices per second | 28.9 |
+| p50 ms per invoice | 32.32 |
+| p95 ms per invoice | 47.72 |
+| max ms per invoice | 109.84 |
+| Batch of 20 files, median ms | 702.8 |
+
+- Machine: Python 3.11.9, AMD64 Family 25 Model 80 Stepping 0 (AuthenticAMD), Windows-10-10.0.26300-SP0
+- Date: 2026-11-10
+- Command: `python -m scripts.benchmark --warmup 1 --runs 5`
+
+This is an in-process measurement on a local laptop (single process, sequential), not a load test of the live demo. Results vary with hardware; the batch row is 20 sequential calls of the same function.
 
 ## Tests
 
