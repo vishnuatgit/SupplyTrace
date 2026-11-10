@@ -1,0 +1,8 @@
+services:
+  supplytrace:
+    build: .
+    image: supplytrace:local
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
