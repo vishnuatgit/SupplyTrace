@@ -1439,6 +1439,7 @@ main {
     font-size: 26px;
 }
 
+.upload-zone h2,
 .upload-zone h3 {
     font-size: var(--fs-md);
     font-weight: 600;
@@ -1495,6 +1496,9 @@ main {
 
 .editor-gutter,
 #xml-editor {
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
     font-family: var(--font-mono);
     font-size: 0.8rem;
     line-height: 1.6;
@@ -2860,6 +2864,7 @@ button.check-row[aria-current="true"] {
     min-width: 0;
 }
 
+.upload-zone-inline h2,
 .upload-zone-inline h3 {
     margin-bottom: 0.1rem;
     font-size: var(--fs-base);
