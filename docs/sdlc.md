@@ -25,7 +25,7 @@ SupplyTrace checks supplier XML invoices with deterministic rules, points each r
 
 ## 4. Testing
 
-Counts come from `pytest --collect-only` in the project's `.venv`: 233 tests in 17 files. Levels are assigned by file name and topic.
+Counts come from `pytest --collect-only` in the project's `.venv`: 234 tests in 18 files. Levels are assigned by file name and topic.
 
 | Level | What it covers | Where | Count |
 |:--|:--|:--|--:|
@@ -63,7 +63,7 @@ flowchart LR
 
 ## 7. Gaps and next steps
 
-- **No UAT.** No real user has tested it. Next: run the task list in [uat.md](uat.md) with three to five people and record the results there.
+- **No UAT.** No real user has tested it. Next: test the main tasks with three to five people and note where they get stuck.
 - **No staging.** Every merge to `main` goes to the one live service. Next: add a second Render service for a branch.
 - **No deploy smoke test.** CI never starts the built app. Next: add a CI step that starts uvicorn and requests `/healthz`.
 - **No browser tests.** Next: add a small Playwright test of the sample check.
