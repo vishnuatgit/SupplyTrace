@@ -25,7 +25,7 @@ SupplyTrace checks supplier XML invoices with deterministic rules, points each r
 
 ## 4. Testing
 
-Counts come from `pytest --collect-only` in the project's `.venv`: 233 tests in 17 files. Levels are assigned by file name and topic.
+Counts come from `pytest --collect-only` in the project's `.venv`: 234 tests in 18 files. Levels are assigned by file name and topic.
 
 | Level | What it covers | Where | Count |
 |:--|:--|:--|--:|
