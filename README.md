@@ -281,7 +281,7 @@ SupplyTrace/
 │   └── utils/             audit.py (audit log writer and reader)
 ├── scripts/               generate_data.py, run_pipeline.py
 ├── tests/                 pytest suite
-├── docs/                  architecture.md, process-flows.md, roadmap.md, sdlc.md, uat.md, walkthroughs/, screenshots/
+├── docs/                  architecture.md, process-flows.md, roadmap.md, sdlc.md, walkthroughs/, screenshots/
 ├── render.yaml            Render Blueprint for the live demo
 ├── requirements.txt       pinned runtime dependencies
 └── requirements-dev.txt   test and lint tools
